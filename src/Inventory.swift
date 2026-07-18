@@ -1,4 +1,4 @@
-// 2026-07-18 19:00 SGT
+// 2026-07-18 19:14 SGT
 
 import Foundation
 import Observation
@@ -11,7 +11,11 @@ final class Inventory {
 
     @discardableResult
     func add(_ document: DocumentRecord) -> Bool {
-        guard !documents.contains(where: { $0.id == document.id }) else {
+        let canonicalURL = document.url.standardizedFileURL.resolvingSymlinksInPath()
+        guard !documents.contains(where: {
+            $0.id == document.id
+                || $0.url.standardizedFileURL.resolvingSymlinksInPath() == canonicalURL
+        }) else {
             return false
         }
 
@@ -25,6 +29,10 @@ final class Inventory {
 
     func clear() {
         documents.removeAll()
+    }
+
+    func replace(with documents: [DocumentRecord]) {
+        self.documents = documents
     }
 
     func reset(for scanSessionID: UUID?) {
