@@ -1,4 +1,4 @@
-// 2026-07-18 21:42 SGT
+// 2026-07-18 21:59 SGT
 
 import Foundation
 import Observation
@@ -15,8 +15,11 @@ final class ScanManager {
     private(set) var selectedRootFolders: [URL] = []
     private(set) var analysisCompletedCount = 0
     private(set) var analysisTotalCount = 0
+    private(set) var hashCompletedCount = 0
+    private(set) var hashTotalCount = 0
     private(set) var isScanning = false
     private(set) var isAnalysing = false
+    private(set) var isHashing = false
     private var stopRequested = false
     @ObservationIgnored private var securityScopedRoots: [URL: URL] = [:]
     let inventory: Inventory
@@ -96,6 +99,8 @@ final class ScanManager {
         inventory.replace(with: discoveredDocuments)
         guard !stopRequested else { return }
         try await analyseDocuments()
+        guard !stopRequested else { return }
+        await hashDocuments()
     }
 
     func stopScan() {
@@ -157,6 +162,7 @@ final class ScanManager {
                 analysedDocument.createdAt = values.creationDate
                 analysedDocument.modifiedAt = values.contentModificationDate
                 analysedDocument.isSupported = Self.supportedExtensions.contains(document.fileExtension)
+                analysedDocument.hashStatus = analysedDocument.isSupported == true ? .pending : .notRequired
                 analysedDocument.category = Self.category(for: document.fileExtension)
                 analysedDocument.displayDocumentType = type?.localizedDescription
                     ?? (document.fileExtension.isEmpty ? "Unknown" : document.fileExtension.uppercased())
@@ -173,25 +179,35 @@ final class ScanManager {
         }
     }
 
-    func addSampleDocument() {
-        guard let currentSession else { return }
+    private func hashDocuments() async {
+        let supportedDocuments = documents.filter {
+            $0.analysisStatus == .complete && $0.isSupported == true
+        }
+        hashCompletedCount = 0
+        hashTotalCount = supportedDocuments.count
+        isHashing = true
+        defer { isHashing = false }
 
-        let url = URL(fileURLWithPath: "/tmp/sample-\(documents.count + 1).txt")
-        let document = DocumentRecord(
-            scanSessionID: currentSession.id,
-            url: url,
-            filename: url.lastPathComponent,
-            fileExtension: url.pathExtension,
-            fileSize: 1_024,
-            createdAt: Date(),
-            modifiedAt: Date()
-        )
-        addDocument(document)
-    }
+        for document in supportedDocuments {
+            guard !stopRequested else { break }
+            var hashedDocument = document
+            hashedDocument.hashStatus = .hashing
+            hashedDocument.hashAlgorithm = DocumentContentHasher.algorithm
+            inventory.update(hashedDocument)
+            await Task.yield()
 
-    func removeSampleDocument() {
-        guard let document = documents.last else { return }
-        removeDocument(id: document.id)
+            do {
+                hashedDocument.contentHash = try await DocumentContentHasher.hash(fileAt: document.url)
+                hashedDocument.hashStatus = .complete
+            } catch {
+                hashedDocument.hashError = error.localizedDescription
+                hashedDocument.hashStatus = .failed
+            }
+            hashedDocument.hashedAt = Date()
+            inventory.update(hashedDocument)
+            hashCompletedCount += 1
+            await Task.yield()
+        }
     }
 
     private static func canonicalURL(for url: URL) -> URL {

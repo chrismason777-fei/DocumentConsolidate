@@ -1,4 +1,4 @@
-// 2026-07-18 21:47 SGT
+// 2026-07-18 22:11 SGT
 //
 //  ContentView.swift
 //  DocumentConsolidate
@@ -49,7 +49,22 @@ struct ContentView: View {
 
             LabeledContent("Documents", value: scanManager.documents.count.formatted())
 
-            if scanManager.isAnalysing {
+            if scanManager.isHashing {
+                ProgressView(
+                    value: Double(scanManager.hashCompletedCount),
+                    total: Double(max(scanManager.hashTotalCount, 1))
+                ) {
+                    HStack {
+                        Text("Generating document identities")
+                        Spacer()
+                        Text(
+                            Double(scanManager.hashCompletedCount)
+                                / Double(max(scanManager.hashTotalCount, 1)),
+                            format: .percent.precision(.fractionLength(0))
+                        )
+                    }
+                }
+            } else if scanManager.isAnalysing {
                 ProgressView(
                     value: Double(scanManager.analysisCompletedCount),
                     total: Double(max(scanManager.analysisTotalCount, 1))
@@ -115,9 +130,21 @@ struct ContentView: View {
                         Text(document.fileSize, format: .byteCount(style: .file))
                         Text(document.isSupported.map { $0 ? "Supported" : "Unsupported" } ?? "Support pending")
                         Text(document.analysisStatus.rawValue)
+                        Text("Hash: \(document.hashStatus.rawValue)")
                     }
                     .font(.caption)
                     .foregroundStyle(.secondary)
+
+                    if let contentHash = document.contentHash {
+                        Text("SHA-256: \(contentHash)")
+                            .font(.caption.monospaced())
+                            .textSelection(.enabled)
+                    } else if let hashError = document.hashError {
+                        Text("Hash error: \(hashError)")
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                            .textSelection(.enabled)
+                    }
                 }
             }
 

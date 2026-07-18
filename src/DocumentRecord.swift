@@ -1,4 +1,4 @@
-// 2026-07-18 20:10 SGT
+// 2026-07-18 21:57 SGT
 
 import Foundation
 
@@ -17,6 +17,14 @@ enum DocumentCategory: String, Sendable {
     case other = "Other"
 }
 
+enum DocumentHashStatus: String, Sendable {
+    case notRequired = "Not Required"
+    case pending = "Pending"
+    case hashing = "Hashing"
+    case complete = "Complete"
+    case failed = "Failed"
+}
+
 struct DocumentRecord: Identifiable, Equatable, Sendable {
     let id: UUID
     let scanSessionID: UUID
@@ -31,6 +39,11 @@ struct DocumentRecord: Identifiable, Equatable, Sendable {
     var category: DocumentCategory?
     var displayDocumentType: String?
     var analysedAt: Date?
+    var contentHash: String?
+    var hashStatus: DocumentHashStatus
+    var hashAlgorithm: String?
+    var hashedAt: Date?
+    var hashError: String?
 
     init(
         id: UUID = UUID(),
@@ -45,7 +58,12 @@ struct DocumentRecord: Identifiable, Equatable, Sendable {
         isSupported: Bool? = nil,
         category: DocumentCategory? = nil,
         displayDocumentType: String? = nil,
-        analysedAt: Date? = nil
+        analysedAt: Date? = nil,
+        contentHash: String? = nil,
+        hashStatus: DocumentHashStatus = .notRequired,
+        hashAlgorithm: String? = nil,
+        hashedAt: Date? = nil,
+        hashError: String? = nil
     ) {
         self.id = id
         self.scanSessionID = scanSessionID
@@ -60,5 +78,10 @@ struct DocumentRecord: Identifiable, Equatable, Sendable {
         self.category = category
         self.displayDocumentType = displayDocumentType
         self.analysedAt = analysedAt
+        self.contentHash = contentHash
+        self.hashStatus = hashStatus
+        self.hashAlgorithm = hashAlgorithm
+        self.hashedAt = hashedAt
+        self.hashError = hashError
     }
 }
