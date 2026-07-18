@@ -1,4 +1,4 @@
-// 2026-07-18 19:24 SGT
+// 2026-07-18 19:00 SGT
 //
 //  ContentView.swift
 //  DocumentConsolidate
@@ -10,7 +10,6 @@ import SwiftUI
 
 struct ContentView: View {
     @Environment(ScanManager.self) private var scanManager
-    @Environment(Inventory.self) private var inventory
 
     var body: some View {
         VStack(spacing: 12) {
@@ -27,7 +26,7 @@ struct ContentView: View {
                     .foregroundStyle(.secondary)
             }
 
-            LabeledContent("Documents", value: inventory.documents.count.formatted())
+            LabeledContent("Documents", value: scanManager.documents.count.formatted())
 
             HStack {
                 Button("New Scan Session") {
@@ -39,6 +38,23 @@ struct ContentView: View {
                 }
                 .disabled(scanManager.currentSession == nil)
             }
+
+            HStack {
+                Button("Add Sample Document") {
+                    scanManager.addSampleDocument()
+                }
+                .disabled(scanManager.currentSession == nil)
+
+                Button("Remove Sample Document") {
+                    scanManager.removeSampleDocument()
+                }
+                .disabled(scanManager.documents.isEmpty)
+
+                Button("Clear Documents") {
+                    scanManager.clearDocuments()
+                }
+                .disabled(scanManager.documents.isEmpty)
+            }
         }
         .padding()
         .frame(minWidth: 480, minHeight: 320)
@@ -49,5 +65,4 @@ struct ContentView: View {
     let inventory = Inventory()
     ContentView()
         .environment(ScanManager(inventory: inventory))
-        .environment(inventory)
 }

@@ -1,4 +1,4 @@
-// 2026-07-18 18:31 SGT
+// 2026-07-18 19:00 SGT
 //
 //  DocumentConsolidateApp.swift
 //  DocumentConsolidate
@@ -21,7 +21,6 @@ struct DocumentConsolidateApp: App {
         WindowGroup {
             ContentView()
                 .environment(scanManager)
-                .environment(scanManager.inventory)
         }
     }
 }
