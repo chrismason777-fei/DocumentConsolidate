@@ -1,4 +1,4 @@
-// 2026-07-18 20:10 SGT
+// 2026-07-18 23:05 SGT
 
 import Foundation
 import Observation
@@ -8,6 +8,7 @@ import Observation
 final class Inventory {
     private(set) var scanSessionID: UUID?
     private(set) var documents: [DocumentRecord] = []
+    private(set) var recommendations: [DuplicateRecommendation] = []
 
     @discardableResult
     func add(_ document: DocumentRecord) -> Bool {
@@ -40,8 +41,18 @@ final class Inventory {
         documents[index] = document
     }
 
+    func replaceRecommendations(with recommendations: [DuplicateRecommendation]) {
+        self.recommendations = recommendations
+    }
+
+    func updateRecommendationDecision(id: String, decision: RecommendationDecision) {
+        guard let index = recommendations.firstIndex(where: { $0.id == id }) else { return }
+        recommendations[index].decision = decision
+    }
+
     func reset(for scanSessionID: UUID?) {
         self.scanSessionID = scanSessionID
         clear()
+        recommendations.removeAll()
     }
 }

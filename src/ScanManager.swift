@@ -1,4 +1,4 @@
-// 2026-07-18 22:46 SGT
+// 2026-07-18 23:05 SGT
 
 import Foundation
 import Observation
@@ -7,9 +7,8 @@ import UniformTypeIdentifiers
 @MainActor
 @Observable
 final class ScanManager {
-    private static let supportedExtensions: Set<String> = [
-        "pdf", "docx", "xlsx", "pptx", "md", "txt", "rtf", "odt", "ods", "odp"
-    ]
+    private static let supportedExtensions: Set<String> =
+        ["pdf", "docx", "xlsx", "pptx", "md", "txt", "rtf", "odt", "ods", "odp"]
 
     private(set) var currentSession: ScanSession?
     private(set) var selectedRootFolders: [URL] = []
@@ -24,13 +23,11 @@ final class ScanManager {
     @ObservationIgnored private var securityScopedRoots: [URL: URL] = [:]
     let inventory: Inventory
 
-    init(inventory: Inventory) {
-        self.inventory = inventory
-    }
+    init(inventory: Inventory) { self.inventory = inventory }
 
-    var documents: [DocumentRecord] {
-        inventory.documents
-    }
+    var documents: [DocumentRecord] { inventory.documents }
+
+    var recommendations: [DuplicateRecommendation] { inventory.recommendations }
 
     @discardableResult
     func createSession(for sourceFolders: [URL] = []) -> ScanSession {
@@ -46,17 +43,11 @@ final class ScanManager {
     }
 
     @discardableResult
-    func addDocument(_ document: DocumentRecord) -> Bool {
-        inventory.add(document)
-    }
+    func addDocument(_ document: DocumentRecord) -> Bool { inventory.add(document) }
 
-    func removeDocument(id: UUID) {
-        inventory.remove(id: id)
-    }
+    func removeDocument(id: UUID) { inventory.remove(id: id) }
 
-    func clearDocuments() {
-        inventory.clear()
-    }
+    func clearDocuments() { inventory.clear() }
 
     @discardableResult
     func addRootFolder(_ folder: URL) -> Bool {
@@ -102,12 +93,13 @@ final class ScanManager {
         guard !stopRequested else { return }
         await hashDocuments()
         guard !stopRequested else { return }
-        detectDuplicates()
+        let duplicateResult = detectDuplicates()
+        generateRecommendations(from: duplicateResult.duplicateGroups)
     }
 
     func stopScan() { stopRequested = true }
 
-    private func detectDuplicates() {
+    private func detectDuplicates() -> DuplicateDetectionResult {
         let result = DuplicateDetectionService().analyse(documents)
         inventory.replace(with: result.documents)
         currentSession?.duplicateAnalysisStatus = .complete
@@ -115,6 +107,23 @@ final class ScanManager {
         currentSession?.uniqueDocumentCount = result.uniqueDocumentCount
         currentSession?.duplicateDocumentCount = result.duplicateDocumentCount
         currentSession?.duplicateGroupCount = result.duplicateGroupCount
+        return result
+    }
+
+    private func generateRecommendations(from groups: [DuplicateGroup]) {
+        let recommendationResult = RecommendationService().generate(from: groups)
+        inventory.replaceRecommendations(with: recommendationResult.recommendations)
+        currentSession?.recommendationPhaseStatus = .complete
+        currentSession?.evaluatedDuplicateGroupCount = recommendationResult.evaluatedGroupCount
+        currentSession?.generatedRecommendationCount = recommendationResult.recommendations.count
+        currentSession?.recommendationFailureCount = recommendationResult.failureCount
+        refreshRecommendationSummary()
+    }
+
+    func refreshRecommendationSummary() {
+        currentSession?.groupsRequiringReviewCount = recommendations.filter { $0.status == .requiresReview }.count
+        currentSession?.acceptedRecommendationCount = recommendations.filter { $0.decision == .accepted }.count
+        currentSession?.rejectedRecommendationCount = recommendations.filter { $0.decision == .rejected }.count
     }
 
     private func enumerateDocuments(in roots: [URL], sessionID: UUID) async throws -> [DocumentRecord] {
@@ -173,7 +182,7 @@ final class ScanManager {
                 analysedDocument.modifiedAt = values.contentModificationDate
                 analysedDocument.isSupported = Self.supportedExtensions.contains(document.fileExtension)
                 analysedDocument.hashStatus = analysedDocument.isSupported == true ? .pending : .notRequired
-                analysedDocument.category = Self.category(for: document.fileExtension)
+                analysedDocument.category = DocumentClassification.category(for: document.fileExtension)
                 analysedDocument.displayDocumentType = type?.localizedDescription
                     ?? (document.fileExtension.isEmpty ? "Unknown" : document.fileExtension.uppercased())
                 analysedDocument.analysedAt = Date()
@@ -220,9 +229,7 @@ final class ScanManager {
         }
     }
 
-    private static func canonicalURL(for url: URL) -> URL {
-        url.standardizedFileURL.resolvingSymlinksInPath()
-    }
+    private static func canonicalURL(for url: URL) -> URL { url.standardizedFileURL.resolvingSymlinksInPath() }
 
     nonisolated private static func enumeratedFileURLs(in roots: [URL]) throws -> [URL] {
         var fileURLs: [URL] = []
@@ -236,15 +243,5 @@ final class ScanManager {
             fileURLs.append(contentsOf: enumerator.compactMap { ($0 as? URL)?.standardizedFileURL.resolvingSymlinksInPath() })
         }
         return fileURLs
-    }
-
-    private static func category(for fileExtension: String) -> DocumentCategory {
-        switch fileExtension {
-        case "pdf", "docx", "odt", "rtf": .document
-        case "xlsx", "ods": .spreadsheet
-        case "pptx", "odp": .presentation
-        case "md", "txt": .text
-        default: .other
-        }
     }
 }

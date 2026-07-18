@@ -1,12 +1,18 @@
-// 2026-07-18 22:46 SGT
+// 2026-07-19 00:04 SGT
 
 import Foundation
+
+struct DuplicateGroup: Sendable {
+    let identifier: String
+    let documents: [DocumentRecord]
+}
 
 struct DuplicateDetectionResult: Sendable {
     let documents: [DocumentRecord]
     let uniqueDocumentCount: Int
     let duplicateDocumentCount: Int
     let duplicateGroupCount: Int
+    let duplicateGroups: [DuplicateGroup]
 }
 
 struct DuplicateDetectionService: Sendable {
@@ -35,11 +41,21 @@ struct DuplicateDetectionService: Sendable {
             return analysedDocument
         }
         let duplicateGroups = groups.values.filter { $0.count > 1 }
+        let completedGroups = duplicateGroups.compactMap { documents -> DuplicateGroup? in
+            guard let identifier = documents.first?.contentHash else { return nil }
+            return DuplicateGroup(
+                identifier: identifier,
+                documents: analysedDocuments
+                    .filter { $0.duplicateGroupIdentifier == identifier }
+                    .sorted { $0.url.path < $1.url.path }
+            )
+        }.sorted { $0.identifier < $1.identifier }
         return DuplicateDetectionResult(
             documents: analysedDocuments,
             uniqueDocumentCount: groups.values.filter { $0.count == 1 }.count,
             duplicateDocumentCount: duplicateGroups.reduce(0) { $0 + $1.count },
-            duplicateGroupCount: duplicateGroups.count
+            duplicateGroupCount: duplicateGroups.count,
+            duplicateGroups: completedGroups
         )
     }
 }

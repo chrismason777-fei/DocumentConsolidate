@@ -1,4 +1,4 @@
-// 2026-07-18 22:56 SGT
+// 2026-07-18 23:05 SGT
 //
 //  ContentView.swift
 //  DocumentConsolidate
@@ -171,6 +171,8 @@ struct ContentView: View {
                     }
                 }
             }
+
+            RecommendationReviewView()
 
             GroupBox("Development sample controls") {
                 HStack {
