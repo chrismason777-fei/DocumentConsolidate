@@ -7,27 +7,21 @@
 //
 
 import SwiftUI
-import SwiftData
 
 @main
 struct DocumentConsolidateApp: App {
-    var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
-            Item.self,
-        ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+    @State private var scanManager: ScanManager
 
-        do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
-        } catch {
-            fatalError("Could not create ModelContainer: \(error)")
-        }
-    }()
+    init() {
+        let inventory = Inventory()
+        _scanManager = State(initialValue: ScanManager(inventory: inventory))
+    }
 
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environment(scanManager)
+                .environment(scanManager.inventory)
         }
-        .modelContainer(sharedModelContainer)
     }
 }
