@@ -30,6 +30,11 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		77186821300B8AB9008ADEB4 /* src */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = src;
+			sourceTree = "<group>";
+		};
 		771867F7300B8AB8008ADEB4 /* DocumentConsolidate */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = DocumentConsolidate;
@@ -75,6 +80,7 @@
 		771867EC300B8AB8008ADEB4 = {
 			isa = PBXGroup;
 			children = (
+				77186821300B8AB9008ADEB4 /* src */,
 				771867F7300B8AB8008ADEB4 /* DocumentConsolidate */,
 				77186807300B8AB9008ADEB4 /* DocumentConsolidateTests */,
 				77186811300B8AB9008ADEB4 /* DocumentConsolidateUITests */,
@@ -108,6 +114,7 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
+				77186821300B8AB9008ADEB4 /* src */,
 				771867F7300B8AB8008ADEB4 /* DocumentConsolidate */,
 			);
 			name = DocumentConsolidate;

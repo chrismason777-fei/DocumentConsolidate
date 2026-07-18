@@ -27,9 +27,9 @@ After providing the challenge response, continue processing any implementation t
 
 ## Project Context
 
-Project structure and architecture: `docs/ai_context/architecture.md`
+The approved project architecture is defined in `engineering/design.md`.
 
-Read that file before any architecture-sensitive task.
+Read that file before any architecture-sensitive task. Do not require or create a separate architecture document unless explicitly instructed.
 
 ## File Size Rule
 
