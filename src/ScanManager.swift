@@ -1,4 +1,4 @@
-// 2026-07-18 21:59 SGT
+// 2026-07-18 22:46 SGT
 
 import Foundation
 import Observation
@@ -101,10 +101,20 @@ final class ScanManager {
         try await analyseDocuments()
         guard !stopRequested else { return }
         await hashDocuments()
+        guard !stopRequested else { return }
+        detectDuplicates()
     }
 
-    func stopScan() {
-        stopRequested = true
+    func stopScan() { stopRequested = true }
+
+    private func detectDuplicates() {
+        let result = DuplicateDetectionService().analyse(documents)
+        inventory.replace(with: result.documents)
+        currentSession?.duplicateAnalysisStatus = .complete
+        currentSession?.totalDocumentCount = documents.count
+        currentSession?.uniqueDocumentCount = result.uniqueDocumentCount
+        currentSession?.duplicateDocumentCount = result.duplicateDocumentCount
+        currentSession?.duplicateGroupCount = result.duplicateGroupCount
     }
 
     private func enumerateDocuments(in roots: [URL], sessionID: UUID) async throws -> [DocumentRecord] {

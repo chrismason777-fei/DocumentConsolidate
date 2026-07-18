@@ -1,4 +1,4 @@
-// 2026-07-18 21:57 SGT
+// 2026-07-18 22:46 SGT
 
 import Foundation
 
@@ -25,6 +25,13 @@ enum DocumentHashStatus: String, Sendable {
     case failed = "Failed"
 }
 
+enum DocumentDuplicateStatus: String, Sendable {
+    case pending = "Pending"
+    case unique = "Unique"
+    case duplicate = "Duplicate"
+    case unavailable = "Unavailable"
+}
+
 struct DocumentRecord: Identifiable, Equatable, Sendable {
     let id: UUID
     let scanSessionID: UUID
@@ -44,6 +51,10 @@ struct DocumentRecord: Identifiable, Equatable, Sendable {
     var hashAlgorithm: String?
     var hashedAt: Date?
     var hashError: String?
+    var duplicateStatus: DocumentDuplicateStatus
+    var duplicateGroupIdentifier: String?
+    var duplicateGroupSize: Int
+    var isPreferredCopy: Bool
 
     init(
         id: UUID = UUID(),
@@ -63,7 +74,11 @@ struct DocumentRecord: Identifiable, Equatable, Sendable {
         hashStatus: DocumentHashStatus = .notRequired,
         hashAlgorithm: String? = nil,
         hashedAt: Date? = nil,
-        hashError: String? = nil
+        hashError: String? = nil,
+        duplicateStatus: DocumentDuplicateStatus = .pending,
+        duplicateGroupIdentifier: String? = nil,
+        duplicateGroupSize: Int = 1,
+        isPreferredCopy: Bool = false
     ) {
         self.id = id
         self.scanSessionID = scanSessionID
@@ -83,5 +98,9 @@ struct DocumentRecord: Identifiable, Equatable, Sendable {
         self.hashAlgorithm = hashAlgorithm
         self.hashedAt = hashedAt
         self.hashError = hashError
+        self.duplicateStatus = duplicateStatus
+        self.duplicateGroupIdentifier = duplicateGroupIdentifier
+        self.duplicateGroupSize = duplicateGroupSize
+        self.isPreferredCopy = isPreferredCopy
     }
 }

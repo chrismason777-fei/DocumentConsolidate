@@ -1,4 +1,4 @@
-// 2026-07-18 22:11 SGT
+// 2026-07-18 22:56 SGT
 //
 //  ContentView.swift
 //  DocumentConsolidate
@@ -13,6 +13,7 @@ struct ContentView: View {
     @Environment(ScanManager.self) private var scanManager
     @State private var isFolderPickerPresented = false
     @State private var scanError: String?
+    @State private var expandedDuplicateGroups: Set<String> = []
 
     var body: some View {
         VStack(spacing: 12) {
@@ -25,23 +26,22 @@ struct ContentView: View {
                     Text(session.createdAt, format: .dateTime)
                 }
                 LabeledContent("Scanned roots", value: session.sourceFolders.count.formatted())
+                LabeledContent("Unique documents", value: session.uniqueDocumentCount.formatted())
+                LabeledContent("Duplicate documents", value: session.duplicateDocumentCount.formatted())
+                LabeledContent("Duplicate groups", value: session.duplicateGroupCount.formatted())
+                LabeledContent("Duplicate analysis", value: session.duplicateAnalysisStatus.rawValue)
             } else {
                 Text("No scan session")
                     .foregroundStyle(.secondary)
             }
 
-            GroupBox("Selected root folders") {
-                if scanManager.selectedRootFolders.isEmpty {
-                    Text("No folders selected")
-                        .foregroundStyle(.secondary)
-                } else {
-                    ForEach(scanManager.selectedRootFolders, id: \.self) { folder in
-                        HStack {
-                            Text(folder.path(percentEncoded: false))
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            Button("Remove") {
-                                scanManager.removeRootFolder(folder)
-                            }
+            GroupBox(rootFolderSectionTitle) {
+                ForEach(scanManager.selectedRootFolders, id: \.self) { folder in
+                    HStack {
+                        Text(folder.path(percentEncoded: false))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        Button("Remove") {
+                            scanManager.removeRootFolder(folder)
                         }
                     }
                 }
@@ -131,6 +131,10 @@ struct ContentView: View {
                         Text(document.isSupported.map { $0 ? "Supported" : "Unsupported" } ?? "Support pending")
                         Text(document.analysisStatus.rawValue)
                         Text("Hash: \(document.hashStatus.rawValue)")
+                        Text("Duplicate: \(document.duplicateStatus.rawValue)")
+                        if document.duplicateStatus == .duplicate {
+                            Text("Group size: \(document.duplicateGroupSize)")
+                        }
                     }
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -144,6 +148,26 @@ struct ContentView: View {
                             .font(.caption)
                             .foregroundStyle(.red)
                             .textSelection(.enabled)
+                    }
+                }
+            }
+
+            if !duplicateGroups.isEmpty {
+                GroupBox("Duplicate groups") {
+                    ForEach(duplicateGroups, id: \.key) { group in
+                        DisclosureGroup(isExpanded: duplicateGroupExpansionBinding(for: group.key)) {
+                            ForEach(group.value) { document in
+                                Text(document.url.path(percentEncoded: false))
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                        } label: {
+                            Text("\(group.value.count) copies · \(group.key.prefix(12))")
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    toggleDuplicateGroup(group.key)
+                                }
+                        }
                     }
                 }
             }
@@ -180,6 +204,39 @@ struct ContentView: View {
             } catch {
                 scanError = error.localizedDescription
             }
+        }
+    }
+
+    private var duplicateGroups: [(key: String, value: [DocumentRecord])] {
+        Dictionary(grouping: scanManager.documents.filter {
+            $0.duplicateStatus == .duplicate && $0.duplicateGroupIdentifier != nil
+        }) { $0.duplicateGroupIdentifier! }
+            .sorted { $0.key < $1.key }
+    }
+
+    private var rootFolderSectionTitle: String {
+        let count = scanManager.selectedRootFolders.count
+        return count == 0 ? "Root folders — none selected" : "Root folders — \(count) selected"
+    }
+
+    private func duplicateGroupExpansionBinding(for identifier: String) -> Binding<Bool> {
+        Binding(
+            get: { expandedDuplicateGroups.contains(identifier) },
+            set: { isExpanded in
+                if isExpanded {
+                    expandedDuplicateGroups.insert(identifier)
+                } else {
+                    expandedDuplicateGroups.remove(identifier)
+                }
+            }
+        )
+    }
+
+    private func toggleDuplicateGroup(_ identifier: String) {
+        if expandedDuplicateGroups.contains(identifier) {
+            expandedDuplicateGroups.remove(identifier)
+        } else {
+            expandedDuplicateGroups.insert(identifier)
         }
     }
 }
