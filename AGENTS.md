@@ -57,6 +57,17 @@ If a target file exceeds 250 lines, do not add further implementation directly t
 - Do not leave `print()` calls in production code.
 - Perform SwiftData mutations through `loggedInsert()`, `loggedDelete()`, and `loggedSave()`.
 
+## Milestone Sessions
+
+Each approved milestone shall be implemented in a new Codex session.
+
+At the beginning of the session:
+
+1. Read all authoritative project documentation referenced by this document.
+2. Perform the standard repository readiness check.
+3. If the repository is ready and the implementation task explicitly states that the milestone has already been approved, proceed immediately with implementation.
+4. Do not request a second implementation approval unless a genuine architectural ambiguity or repository blocker is discovered.
+
 ## Invariants
 
 - Record human-readable timestamps in Singapore Time (SGT).
