@@ -1,4 +1,4 @@
-// 2026-07-18 19:14 SGT
+// 2026-07-18 21:47 SGT
 //
 //  ContentView.swift
 //  DocumentConsolidate
@@ -49,6 +49,25 @@ struct ContentView: View {
 
             LabeledContent("Documents", value: scanManager.documents.count.formatted())
 
+            if scanManager.isAnalysing {
+                ProgressView(
+                    value: Double(scanManager.analysisCompletedCount),
+                    total: Double(max(scanManager.analysisTotalCount, 1))
+                ) {
+                    HStack {
+                        Text("Analysing documents")
+                        Spacer()
+                        Text(
+                            Double(scanManager.analysisCompletedCount)
+                                / Double(max(scanManager.analysisTotalCount, 1)),
+                            format: .percent.precision(.fractionLength(0))
+                        )
+                    }
+                }
+            } else if scanManager.isScanning {
+                ProgressView("Enumerating documents")
+            }
+
             HStack {
                 Button("Add Root Folder") {
                     isFolderPickerPresented = true
@@ -60,14 +79,21 @@ struct ContentView: View {
                 .disabled(scanManager.selectedRootFolders.isEmpty)
 
                 Button("Scan Selected Folders") {
-                    do {
-                        try scanManager.scan()
-                        scanError = nil
-                    } catch {
-                        scanError = error.localizedDescription
+                    Task {
+                        do {
+                            try await scanManager.scan()
+                            scanError = nil
+                        } catch {
+                            scanError = error.localizedDescription
+                        }
                     }
                 }
-                .disabled(scanManager.selectedRootFolders.isEmpty)
+                .disabled(scanManager.selectedRootFolders.isEmpty || scanManager.isScanning)
+
+                Button("Stop Scan") {
+                    scanManager.stopScan()
+                }
+                .disabled(!scanManager.isScanning)
 
                 Button("Reset Scan Session") {
                     scanManager.resetSession()
@@ -78,6 +104,21 @@ struct ContentView: View {
             if let scanError {
                 Text(scanError)
                     .foregroundStyle(.red)
+            }
+
+            List(scanManager.documents) { document in
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(document.filename)
+                    HStack {
+                        Text(document.displayDocumentType ?? "Awaiting analysis")
+                        Text(document.category?.rawValue ?? "Uncategorised")
+                        Text(document.fileSize, format: .byteCount(style: .file))
+                        Text(document.isSupported.map { $0 ? "Supported" : "Unsupported" } ?? "Support pending")
+                        Text(document.analysisStatus.rawValue)
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                }
             }
 
             GroupBox("Development sample controls") {

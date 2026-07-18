@@ -1,4 +1,4 @@
-// 2026-07-18 19:14 SGT
+// 2026-07-18 20:10 SGT
 
 import Foundation
 import Observation
@@ -33,6 +33,11 @@ final class Inventory {
 
     func replace(with documents: [DocumentRecord]) {
         self.documents = documents
+    }
+
+    func update(_ document: DocumentRecord) {
+        guard let index = documents.firstIndex(where: { $0.id == document.id }) else { return }
+        documents[index] = document
     }
 
     func reset(for scanSessionID: UUID?) {
