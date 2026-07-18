@@ -1,4 +1,4 @@
-// 2026-07-18 18:31 SGT
+// 2026-07-18 19:24 SGT
 //
 //  ContentView.swift
 //  DocumentConsolidate
@@ -18,15 +18,29 @@ struct ContentView: View {
                 .font(.title)
 
             if let session = scanManager.currentSession {
-                Text("Scan session \(session.id.uuidString)")
+                LabeledContent("Session identifier", value: session.id.uuidString)
+                LabeledContent("Created") {
+                    Text(session.createdAt, format: .dateTime)
+                }
             } else {
                 Text("No scan session")
                     .foregroundStyle(.secondary)
             }
 
-            Text("\(inventory.documents.count) documents")
-                .foregroundStyle(.secondary)
+            LabeledContent("Documents", value: inventory.documents.count.formatted())
+
+            HStack {
+                Button("New Scan Session") {
+                    scanManager.createSession()
+                }
+
+                Button("Reset Scan Session") {
+                    scanManager.resetSession()
+                }
+                .disabled(scanManager.currentSession == nil)
+            }
         }
+        .padding()
         .frame(minWidth: 480, minHeight: 320)
     }
 }

@@ -1,4 +1,4 @@
-// 2026-07-18 18:46 SGT
+// 2026-07-18 19:24 SGT
 
 import Foundation
 import Observation
@@ -14,10 +14,15 @@ final class ScanManager {
     }
 
     @discardableResult
-    func createSession(for sourceFolders: [URL]) -> ScanSession {
+    func createSession(for sourceFolders: [URL] = []) -> ScanSession {
         let session = ScanSession(sourceFolders: sourceFolders)
-        inventory.reset()
+        inventory.reset(for: session.id)
         currentSession = session
         return session
+    }
+
+    func resetSession() {
+        currentSession = nil
+        inventory.reset(for: nil)
     }
 }
