@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		771D81FE300C90AF0089179F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 771D81FD300C90AF0089179F /* Assets.xcassets */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		77186805300B8AB9008ADEB4 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -27,19 +31,10 @@
 		771867F5300B8AB8008ADEB4 /* DocumentConsolidate.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DocumentConsolidate.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		77186804300B8AB9008ADEB4 /* DocumentConsolidateTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DocumentConsolidateTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		7718680E300B8AB9008ADEB4 /* DocumentConsolidateUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DocumentConsolidateUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		771D81FD300C90AF0089179F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		77186821300B8AB9008ADEB4 /* src */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = src;
-			sourceTree = "<group>";
-		};
-		771867F7300B8AB8008ADEB4 /* DocumentConsolidate */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = DocumentConsolidate;
-			sourceTree = "<group>";
-		};
 		77186807300B8AB9008ADEB4 /* DocumentConsolidateTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = DocumentConsolidateTests;
@@ -48,6 +43,11 @@
 		77186811300B8AB9008ADEB4 /* DocumentConsolidateUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = DocumentConsolidateUITests;
+			sourceTree = "<group>";
+		};
+		77186821300B8AB9008ADEB4 /* src */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = src;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -81,10 +81,10 @@
 			isa = PBXGroup;
 			children = (
 				77186821300B8AB9008ADEB4 /* src */,
-				771867F7300B8AB8008ADEB4 /* DocumentConsolidate */,
 				77186807300B8AB9008ADEB4 /* DocumentConsolidateTests */,
 				77186811300B8AB9008ADEB4 /* DocumentConsolidateUITests */,
 				771867F6300B8AB8008ADEB4 /* Products */,
+				771D81FD300C90AF0089179F /* Assets.xcassets */,
 			);
 			sourceTree = "<group>";
 		};
@@ -115,7 +115,6 @@
 			);
 			fileSystemSynchronizedGroups = (
 				77186821300B8AB9008ADEB4 /* src */,
-				771867F7300B8AB8008ADEB4 /* DocumentConsolidate */,
 			);
 			name = DocumentConsolidate;
 			packageProductDependencies = (
@@ -219,6 +218,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				771D81FE300C90AF0089179F /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

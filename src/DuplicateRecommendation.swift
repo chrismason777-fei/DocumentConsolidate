@@ -14,12 +14,20 @@ enum RecommendationDecision: String, Sendable {
     case rejected = "Rejected"
 }
 
+enum RecommendationFileRole: String, Sendable {
+    case retain = "Retain"
+    case consolidate = "Consolidate"
+    case exclude = "Exclude"
+}
+
 struct DuplicateRecommendation: Identifiable, Equatable, Sendable {
     let id: String
     let duplicateGroupIdentifier: String
-    let proposedRetainedDocumentID: UUID?
-    let proposedRedundantDocumentIDs: [UUID]
-    let status: RecommendationStatus
+    var selectedRetainedDocumentID: UUID?
+    var excludedDocumentIDs: [UUID]
+    var proposedRetainedDocumentID: UUID?
+    var proposedRedundantDocumentIDs: [UUID]
+    var status: RecommendationStatus
     let rationale: String
     let isDeterministic: Bool
     var decision: RecommendationDecision = .pending

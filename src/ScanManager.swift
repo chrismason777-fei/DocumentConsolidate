@@ -1,4 +1,4 @@
-// 2026-07-18 23:05 SGT
+// 2026-07-19 16:55 SGT
 
 import Foundation
 import Observation
@@ -10,7 +10,7 @@ final class ScanManager {
     private static let supportedExtensions: Set<String> =
         ["pdf", "docx", "xlsx", "pptx", "md", "txt", "rtf", "odt", "ods", "odp"]
 
-    private(set) var currentSession: ScanSession?
+    var currentSession: ScanSession?
     private(set) var selectedRootFolders: [URL] = []
     private(set) var analysisCompletedCount = 0
     private(set) var analysisTotalCount = 0
@@ -19,7 +19,8 @@ final class ScanManager {
     private(set) var isScanning = false
     private(set) var isAnalysing = false
     private(set) var isHashing = false
-    private var stopRequested = false
+    var stopRequested = false
+    @ObservationIgnored var activeHashTask: Task<String, Error>?
     @ObservationIgnored private var securityScopedRoots: [URL: URL] = [:]
     let inventory: Inventory
 
@@ -29,6 +30,8 @@ final class ScanManager {
 
     var recommendations: [DuplicateRecommendation] { inventory.recommendations }
 
+    var executionPlan: ExecutionPlan? { inventory.executionPlan }
+
     @discardableResult
     func createSession(for sourceFolders: [URL] = []) -> ScanSession {
         let session = ScanSession(sourceFolders: sourceFolders)
@@ -37,7 +40,7 @@ final class ScanManager {
         return session
     }
 
-    func resetSession() {
+    func clearSessionState() {
         currentSession = nil
         inventory.reset(for: nil)
     }
@@ -97,8 +100,6 @@ final class ScanManager {
         generateRecommendations(from: duplicateResult.duplicateGroups)
     }
 
-    func stopScan() { stopRequested = true }
-
     private func detectDuplicates() -> DuplicateDetectionResult {
         let result = DuplicateDetectionService().analyse(documents)
         inventory.replace(with: result.documents)
@@ -118,12 +119,6 @@ final class ScanManager {
         currentSession?.generatedRecommendationCount = recommendationResult.recommendations.count
         currentSession?.recommendationFailureCount = recommendationResult.failureCount
         refreshRecommendationSummary()
-    }
-
-    func refreshRecommendationSummary() {
-        currentSession?.groupsRequiringReviewCount = recommendations.filter { $0.status == .requiresReview }.count
-        currentSession?.acceptedRecommendationCount = recommendations.filter { $0.decision == .accepted }.count
-        currentSession?.rejectedRecommendationCount = recommendations.filter { $0.decision == .rejected }.count
     }
 
     private func enumerateDocuments(in roots: [URL], sessionID: UUID) async throws -> [DocumentRecord] {
@@ -215,13 +210,18 @@ final class ScanManager {
             inventory.update(hashedDocument)
             await Task.yield()
 
+            let hashTask = Task { try await DocumentContentHasher.hash(fileAt: document.url) }
+            activeHashTask = hashTask
             do {
-                hashedDocument.contentHash = try await DocumentContentHasher.hash(fileAt: document.url)
+                hashedDocument.contentHash = try await hashTask.value
                 hashedDocument.hashStatus = .complete
+            } catch is CancellationError {
+                hashedDocument.hashStatus = .pending
             } catch {
                 hashedDocument.hashError = error.localizedDescription
                 hashedDocument.hashStatus = .failed
             }
+            activeHashTask = nil
             hashedDocument.hashedAt = Date()
             inventory.update(hashedDocument)
             hashCompletedCount += 1

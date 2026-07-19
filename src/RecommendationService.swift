@@ -23,6 +23,8 @@ struct RecommendationService: Sendable {
                 DuplicateRecommendation(
                     id: group.identifier,
                     duplicateGroupIdentifier: group.identifier,
+                    selectedRetainedDocumentID: nil,
+                    excludedDocumentIDs: [],
                     proposedRetainedDocumentID: nil,
                     proposedRedundantDocumentIDs: [],
                     status: .requiresReview,
