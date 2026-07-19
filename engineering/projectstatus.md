@@ -1,13 +1,15 @@
 # Project Status
 
 **Project:** Document Consolidator  
-**Status:** Implementation — Milestone 9 Complete
+**Status:** Implementation — Release 1 Duplicate-Archival Scope Corrected
 
 ---
 
 # Project Summary
 
 Document Consolidator has completed Release 1 implementation Milestone 9.
+
+The duplicate workflow now expresses definitive-copy selection, redundant-copy archival approval, and archive-plan review only, while preserving the NavigationSplitView workflow.
 
 Product Definition has been completed and approved.
 
@@ -120,12 +122,14 @@ Engineering shall not implement functionality outside the approved Release1Scope
 | 2026-07-18 | Milestone 7 duplicate detection engine completed |
 | 2026-07-19 | Milestone 8 duplicate recommendation foundation completed |
 | 2026-07-19 | Milestone 9 deterministic execution plan generation and validation completed |
+| 2026-07-19 | Recommendation generation ownership, Review resolution, decisions, and execution-plan eligibility rectified |
+| 2026-07-19 | Release 1 scope corrected to exact-duplicate definitive-copy selection and redundant-copy archive planning |
 
 ---
 
 # Next Milestone
 
-Milestone 9 implementation is complete pending manual verification
+Release 1 duplicate-archival scope correction passes the focused automated test suite and Debug/Release builds and is pending manual verification.
 
 Implementation shall proceed one approved engineering phase at a time.
 

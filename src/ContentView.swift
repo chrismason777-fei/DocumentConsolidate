@@ -1,4 +1,4 @@
-// 2026-07-19 16:28 SGT
+// 2026-07-19 17:25 SGT
 //
 //  ContentView.swift
 //  DocumentConsolidate
@@ -67,7 +67,7 @@ struct ContentView: View {
         case .scan:
             WorkflowPlaceholderDetail(
                 title: "Analysis pipeline",
-                message: "Filesystem enumeration, document analysis, hashing, duplicate detection, recommendations, and planning remain separate phases."
+                message: "Filesystem enumeration, document analysis, hashing, exact-duplicate detection, archival approval, and archive planning remain separate phases."
             )
         case .inventory:
             DocumentDetailView(document: scanManager.documents.first { $0.id == selectedDocumentID })
@@ -75,7 +75,8 @@ struct ContentView: View {
             DuplicateGroupDetailView(group: duplicateGroups.first { $0.id == selectedDuplicateGroupID })
         case .recommendations:
             RecommendationDetailView(
-                recommendation: scanManager.recommendations.first { $0.id == selectedRecommendationID }
+                recommendation: scanManager.recommendations.first { $0.id == selectedRecommendationID },
+                reviewArchivePlan: { selectedStage = .executionPlan }
             )
         case .executionPlan:
             ExecutionOperationDetailView(
@@ -99,7 +100,7 @@ struct ContentView: View {
         case .duplicates:
             "\(duplicateGroups.count) groups"
         case .recommendations:
-            "\(scanManager.recommendations.filter { $0.decision == .accepted }.count) accepted"
+            "\(scanManager.recommendations.filter { $0.decision == .approved }.count) approved"
         case .executionPlan:
             executionPlanStatus
         }

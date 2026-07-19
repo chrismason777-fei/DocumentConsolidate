@@ -1,4 +1,4 @@
-// 2026-07-19 13:45 SGT
+// 2026-07-19 17:25 SGT
 
 import Foundation
 import Observation
@@ -49,11 +49,14 @@ final class Inventory {
 
     func replaceRecommendations(with recommendations: [DuplicateRecommendation]) {
         self.recommendations = recommendations
+        executionPlan = nil
+        executionPlanDecisionRevision += 1
     }
 
     @discardableResult
     func updateRecommendationDecision(id: String, decision: RecommendationDecision) -> Bool {
         guard let index = recommendations.firstIndex(where: { $0.id == id }),
+              decision != .approved || recommendations[index].isReadyForApproval,
               recommendations[index].decision != decision else { return false }
         recommendations[index].decision = decision
         executionPlanDecisionRevision += 1
@@ -61,56 +64,19 @@ final class Inventory {
     }
 
     @discardableResult
-    func updateRecommendationFileRole(
-        id: String,
-        documentID: UUID,
-        role: RecommendationFileRole
-    ) -> Bool {
-        guard let index = recommendations.firstIndex(where: { $0.id == id }) else { return false }
-        var recommendation = recommendations[index]
-
-        switch role {
-        case .retain:
-            recommendation.selectedRetainedDocumentID = documentID
-            recommendation.excludedDocumentIDs.removeAll { $0 == documentID }
-        case .consolidate:
-            if recommendation.selectedRetainedDocumentID == documentID {
-                recommendation.selectedRetainedDocumentID = nil
-            }
-            recommendation.excludedDocumentIDs.removeAll { $0 == documentID }
-        case .exclude:
-            if recommendation.selectedRetainedDocumentID == documentID {
-                recommendation.selectedRetainedDocumentID = nil
-            }
-            if !recommendation.excludedDocumentIDs.contains(documentID) {
-                recommendation.excludedDocumentIDs.append(documentID)
-            }
-        }
-
-        recommendation.proposedRetainedDocumentID = nil
-        recommendation.proposedRedundantDocumentIDs = []
-        recommendation.status = .requiresReview
-        recommendation.decision = .pending
-        recommendations[index] = recommendation
-        executionPlanDecisionRevision += 1
-        return true
-    }
-
-    @discardableResult
-    func generateRecommendation(id: String, documentIDs: [UUID]) -> Bool {
+    func selectDefinitiveCopy(id: String, documentID: UUID, groupDocumentIDs: [UUID]) -> Bool {
         guard let index = recommendations.firstIndex(where: { $0.id == id }),
-              let retainedID = recommendations[index].selectedRetainedDocumentID,
-              documentIDs.contains(retainedID) else { return false }
-
-        let excludedIDs = Set(recommendations[index].excludedDocumentIDs)
-        let redundantIDs = documentIDs
-            .filter { $0 != retainedID && !excludedIDs.contains($0) }
+              groupDocumentIDs.contains(documentID) else { return false }
+        let redundantIDs = groupDocumentIDs
+            .filter { $0 != documentID }
             .sorted { $0.uuidString < $1.uuidString }
         guard !redundantIDs.isEmpty else { return false }
 
-        recommendations[index].proposedRetainedDocumentID = retainedID
-        recommendations[index].proposedRedundantDocumentIDs = redundantIDs
-        recommendations[index].status = .ready
+        recommendations[index].definitiveDocumentID = documentID
+        recommendations[index].redundantDocumentIDs = redundantIDs
+        recommendations[index].status = .readyForApproval
+        recommendations[index].rationale = "Every file has the same content hash. The definitive copy was selected manually; every other byte-identical group member is a redundant archive candidate."
+        recommendations[index].isManuallySelected = true
         recommendations[index].decision = .pending
         executionPlanDecisionRevision += 1
         return true

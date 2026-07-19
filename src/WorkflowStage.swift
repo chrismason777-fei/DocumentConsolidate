@@ -1,4 +1,4 @@
-// 2026-07-19 16:20 SGT
+// 2026-07-19 17:25 SGT
 
 import SwiftUI
 
@@ -7,8 +7,8 @@ enum WorkflowStage: String, CaseIterable, Identifiable {
     case scan = "Scan"
     case inventory = "Inventory"
     case duplicates = "Duplicates"
-    case recommendations = "Recommendations"
-    case executionPlan = "Execution Plan"
+    case recommendations = "Duplicate Archival"
+    case executionPlan = "Archive Plan"
 
     var id: Self { self }
 

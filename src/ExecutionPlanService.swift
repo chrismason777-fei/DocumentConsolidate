@@ -1,4 +1,4 @@
-// 2026-07-19 11:00 SGT
+// 2026-07-19 17:25 SGT
 
 import Foundation
 
@@ -8,33 +8,30 @@ struct ExecutionPlanService: Sendable {
         documents: [DocumentRecord],
         scanSessionID: UUID
     ) -> ExecutionPlan {
-        let accepted = recommendations
-            .filter { $0.decision == .accepted }
+        let approved = recommendations
+            .filter { $0.decision == .approved && $0.isReadyForApproval }
             .sorted { $0.id < $1.id }
         let documentsByID = Dictionary(uniqueKeysWithValues: documents.map { ($0.id, $0) })
         var operations: [PlannedOperation] = []
 
-        for recommendation in accepted {
-            guard let destinationID = recommendation.proposedRetainedDocumentID,
-                  let destination = documentsByID[destinationID],
-                  !recommendation.proposedRedundantDocumentIDs.isEmpty else {
-                operations.append(invalidPlaceholder(for: recommendation))
-                continue
-            }
+        for recommendation in approved {
+            guard let definitiveID = recommendation.definitiveDocumentID,
+                  let definitive = documentsByID[definitiveID],
+                  definitive.contentHash == recommendation.duplicateGroupIdentifier else { continue }
 
-            for sourceID in recommendation.proposedRedundantDocumentIDs.sorted(by: { $0.uuidString < $1.uuidString }) {
+            for sourceID in recommendation.redundantDocumentIDs.sorted(by: { $0.uuidString < $1.uuidString }) {
                 let source = documentsByID[sourceID]
                 operations.append(
                     PlannedOperation(
                         id: "\(recommendation.id):\(sourceID.uuidString.lowercased())",
-                        type: .consolidateDuplicate,
+                        type: .archiveRedundantCopy,
                         sourceDocument: source,
-                        destination: destination.url,
-                        destinationDocumentID: destination.id,
-                        reason: recommendation.rationale,
+                        destination: nil,
+                        definitiveDocument: definitive,
+                        reason: "Byte-identical duplicate of definitive copy \(definitive.filename).",
                         recommendationID: recommendation.id,
                         expectedHash: source?.contentHash,
-                        expectedDestinationHash: destination.contentHash,
+                        expectedDefinitiveHash: definitive.contentHash ?? recommendation.duplicateGroupIdentifier,
                         executionStatus: .notStarted,
                         validationStatus: source == nil ? .invalid : .pending,
                         validationIssues: source == nil ? ["The source document is no longer present in the inventory."] : []
@@ -44,26 +41,10 @@ struct ExecutionPlanService: Sendable {
         }
 
         return ExecutionPlan(
-            id: accepted.map(\.id).joined(separator: "|"),
+            id: approved.map(\.id).joined(separator: "|"),
             scanSessionID: scanSessionID,
             operations: operations
         )
     }
 
-    private func invalidPlaceholder(for recommendation: DuplicateRecommendation) -> PlannedOperation {
-        PlannedOperation(
-            id: "\(recommendation.id):incomplete",
-            type: .consolidateDuplicate,
-            sourceDocument: nil,
-            destination: nil,
-            destinationDocumentID: nil,
-            reason: recommendation.rationale,
-            recommendationID: recommendation.id,
-            expectedHash: nil,
-            expectedDestinationHash: nil,
-            executionStatus: .notStarted,
-            validationStatus: .invalid,
-            validationIssues: ["The accepted recommendation does not identify a retained copy and redundant copies."]
-        )
-    }
 }

@@ -1,4 +1,4 @@
-// 2026-07-19 16:12 SGT
+// 2026-07-19 17:25 SGT
 
 import SwiftUI
 
@@ -8,10 +8,10 @@ struct ExecutionPlanReviewView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            StageHeading("Execution plan", subtitle: "Review planned operations and validation state.")
+            StageHeading("Archive Plan", subtitle: "Review redundant-copy archive operations and validation state.")
             planSummary
             HStack {
-                Button(scanManager.executionPlan == nil ? "Generate and Validate Plan" : "Refresh Validation", systemImage: "arrow.clockwise") {
+                Button(scanManager.executionPlan == nil ? "Generate and Validate Archive Plan" : "Refresh Validation", systemImage: "arrow.clockwise") {
                     Task { await scanManager.generateExecutionPlan() }
                 }
                 .buttonStyle(.borderedProminent)
@@ -38,7 +38,7 @@ struct ExecutionPlanReviewView: View {
             }
         }
         .padding()
-        .navigationTitle("Execution Plan")
+        .navigationTitle("Archive Plan")
     }
 
     private var planSummary: some View {
@@ -66,10 +66,11 @@ struct ExecutionOperationDetailView: View {
         DetailShell(title: operation?.type.rawValue ?? "No operation selected") {
             if let operation {
                 DetailField("Operation identifier", value: operation.id, monospaced: true)
-                DetailField("Recommendation", value: operation.recommendationID, monospaced: true)
-                DetailField("Source", value: operation.sourceDocument?.url.path ?? "Not specified")
-                DetailField("Destination", value: operation.destination?.path ?? "Not specified")
-                LabeledContent("Execution", value: operation.executionStatus.rawValue)
+                DetailField("Duplicate group", value: operation.recommendationID, monospaced: true)
+                DetailField("Redundant source", value: operation.sourceDocument?.url.path ?? "Not specified")
+                DetailField("Definitive copy", value: operation.definitiveDocument.url.path)
+                DetailField("Archive destination", value: operation.destination?.path ?? "Not yet defined")
+                LabeledContent("Archive execution", value: operation.executionStatus.rawValue)
                 LabeledContent("Validation", value: operation.validationStatus.rawValue)
                 Text(operation.reason)
                     .foregroundStyle(.secondary)

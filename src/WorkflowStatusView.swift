@@ -1,4 +1,4 @@
-// 2026-07-19 14:20 SGT
+// 2026-07-19 17:25 SGT
 
 import SwiftUI
 
@@ -23,8 +23,8 @@ struct WorkflowStatusView: View {
     }
 
     private var readiness: String {
-        guard let plan = scanManager.executionPlan else { return "Plan not generated" }
-        if scanManager.inventory.isGeneratingExecutionPlan { return "Validating plan" }
+        guard let plan = scanManager.executionPlan else { return "Archive plan not generated" }
+        if scanManager.inventory.isGeneratingExecutionPlan { return "Validating archive plan" }
         return plan.isReady ? "Ready" : "Not ready"
     }
 
@@ -37,10 +37,10 @@ struct WorkflowStatusView: View {
     }
 
     private var statusSummary: String {
-        let accepted = scanManager.recommendations.filter { $0.decision == .accepted }.count
+        let approved = scanManager.recommendations.filter { $0.decision == .approved }.count
         let rejected = scanManager.recommendations.filter { $0.decision == .rejected }.count
+        let postponed = scanManager.recommendations.filter { $0.decision == .postponed }.count
         let invalid = scanManager.executionPlan?.invalidOperationCount ?? 0
-        return "\(accepted) accepted · \(rejected) rejected · \(invalid) invalid"
+        return "\(approved) approved · \(rejected) rejected · \(postponed) postponed · \(invalid) invalid"
     }
 }
-

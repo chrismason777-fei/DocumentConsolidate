@@ -1,36 +1,36 @@
-// 2026-07-18 23:05 SGT
+// 2026-07-19 17:25 SGT
 
 import Foundation
 
 enum RecommendationStatus: String, Sendable {
-    case ready = "Ready"
-    case requiresReview = "Requires Review"
+    case needsSelection = "Needs Selection"
+    case readyForApproval = "Ready for Approval"
     case failed = "Failed"
 }
 
 enum RecommendationDecision: String, Sendable {
     case pending = "Pending"
-    case accepted = "Accepted"
+    case approved = "Approved"
     case rejected = "Rejected"
-}
-
-enum RecommendationFileRole: String, Sendable {
-    case retain = "Retain"
-    case consolidate = "Consolidate"
-    case exclude = "Exclude"
+    case postponed = "Postponed"
 }
 
 struct DuplicateRecommendation: Identifiable, Equatable, Sendable {
     let id: String
     let duplicateGroupIdentifier: String
-    var selectedRetainedDocumentID: UUID?
-    var excludedDocumentIDs: [UUID]
-    var proposedRetainedDocumentID: UUID?
-    var proposedRedundantDocumentIDs: [UUID]
+    var definitiveDocumentID: UUID?
+    var redundantDocumentIDs: [UUID]
     var status: RecommendationStatus
-    let rationale: String
+    var rationale: String
     let isDeterministic: Bool
+    var isManuallySelected = false
     var decision: RecommendationDecision = .pending
+
+    var isReadyForApproval: Bool {
+        status == .readyForApproval
+            && definitiveDocumentID != nil
+            && !redundantDocumentIDs.isEmpty
+    }
 }
 
 struct RecommendationGenerationResult: Sendable {

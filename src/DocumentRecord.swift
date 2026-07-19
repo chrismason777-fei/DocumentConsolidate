@@ -1,4 +1,4 @@
-// 2026-07-18 22:46 SGT
+// 2026-07-19 17:25 SGT
 
 import Foundation
 
@@ -54,7 +54,7 @@ struct DocumentRecord: Identifiable, Equatable, Sendable {
     var duplicateStatus: DocumentDuplicateStatus
     var duplicateGroupIdentifier: String?
     var duplicateGroupSize: Int
-    var isPreferredCopy: Bool
+    var hasApprovedDefinitiveCopyEvidence: Bool
 
     init(
         id: UUID = UUID(),
@@ -78,7 +78,7 @@ struct DocumentRecord: Identifiable, Equatable, Sendable {
         duplicateStatus: DocumentDuplicateStatus = .pending,
         duplicateGroupIdentifier: String? = nil,
         duplicateGroupSize: Int = 1,
-        isPreferredCopy: Bool = false
+        hasApprovedDefinitiveCopyEvidence: Bool = false
     ) {
         self.id = id
         self.scanSessionID = scanSessionID
@@ -101,6 +101,6 @@ struct DocumentRecord: Identifiable, Equatable, Sendable {
         self.duplicateStatus = duplicateStatus
         self.duplicateGroupIdentifier = duplicateGroupIdentifier
         self.duplicateGroupSize = duplicateGroupSize
-        self.isPreferredCopy = isPreferredCopy
+        self.hasApprovedDefinitiveCopyEvidence = hasApprovedDefinitiveCopyEvidence
     }
 }

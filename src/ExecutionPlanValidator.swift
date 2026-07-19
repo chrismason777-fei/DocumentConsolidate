@@ -1,4 +1,4 @@
-// 2026-07-19 11:00 SGT
+// 2026-07-19 17:25 SGT
 
 import Foundation
 
@@ -9,7 +9,7 @@ struct ExecutionPlanValidator: Sendable {
         documents: [DocumentRecord],
         currentScanSessionID: UUID?
     ) async -> ExecutionPlan {
-        let acceptedIDs = Set(recommendations.filter { $0.decision == .accepted }.map(\.id))
+        let approvedIDs = Set(recommendations.filter { $0.decision == .approved && $0.isReadyForApproval }.map(\.id))
         let currentDocuments = Dictionary(uniqueKeysWithValues: documents.map { ($0.id, $0) })
         let conflictingIDs = conflictIdentifiers(in: plan.operations)
         var validated = plan
@@ -18,8 +18,8 @@ struct ExecutionPlanValidator: Sendable {
             var operation = validated.operations[index]
             var issues = operation.validationIssues
 
-            if plan.scanSessionID != currentScanSessionID || !acceptedIDs.contains(operation.recommendationID) {
-                issues.append("The recommendation is stale because the scan or acceptance state changed.")
+            if plan.scanSessionID != currentScanSessionID || !approvedIDs.contains(operation.recommendationID) {
+                issues.append("The archive proposal is stale because the scan or approval state changed.")
             }
             if conflictingIDs.contains(operation.id) {
                 issues.append("This operation conflicts with another planned operation.")
@@ -37,9 +37,12 @@ struct ExecutionPlanValidator: Sendable {
                 validated.operations[index] = operation
                 continue
             }
-            if let destinationID = operation.destinationDocumentID,
-               currentDocuments[destinationID]?.contentHash != operation.expectedDestinationHash {
-                issues.append("The analysed destination document or hash is no longer current.")
+            guard currentDocuments[operation.definitiveDocument.id]?.contentHash == operation.expectedDefinitiveHash else {
+                issues.append("The definitive copy or its hash is no longer current.")
+                operation.validationStatus = .invalid
+                operation.validationIssues = issues
+                validated.operations[index] = operation
+                continue
             }
 
             if !FileManager.default.fileExists(atPath: source.url.path) {
@@ -55,21 +58,15 @@ struct ExecutionPlanValidator: Sendable {
                 issues.append("No analysed hash is available for the source file.")
             }
 
-            if let destination = operation.destination,
-               !FileManager.default.fileExists(atPath: destination.path) {
-                issues.append("The destination file no longer exists.")
-            } else if let destination = operation.destination,
-                      let expectedDestinationHash = operation.expectedDestinationHash {
+            if let definitive = currentDocuments[operation.definitiveDocument.id] {
                 do {
-                    let currentHash = try await DocumentContentHasher.hash(fileAt: destination)
-                    if currentHash != expectedDestinationHash {
-                        issues.append("The destination file hash changed after analysis.")
+                    let currentHash = try await DocumentContentHasher.hash(fileAt: definitive.url)
+                    if currentHash != operation.expectedDefinitiveHash {
+                        issues.append("The definitive copy hash changed after analysis.")
                     }
                 } catch {
-                    issues.append("The destination file could not be hashed: \(error.localizedDescription)")
+                    issues.append("The definitive copy could not be hashed: \(error.localizedDescription)")
                 }
-            } else {
-                issues.append("No analysed hash is available for the destination file.")
             }
             operation.validationStatus = issues.isEmpty ? .valid : .invalid
             operation.validationIssues = issues

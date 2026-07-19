@@ -1,4 +1,4 @@
-// 2026-07-18 23:05 SGT
+// 2026-07-19 17:25 SGT
 
 import Foundation
 
@@ -19,16 +19,19 @@ struct RecommendationService: Sendable {
                 continue
             }
 
+            let documents = group.documents.sorted { $0.url.path < $1.url.path }
+            let evidencedCopies = documents.filter(\.hasApprovedDefinitiveCopyEvidence)
+            let definitiveDocument = evidencedCopies.count == 1 ? evidencedCopies.first : nil
             recommendations.append(
                 DuplicateRecommendation(
                     id: group.identifier,
                     duplicateGroupIdentifier: group.identifier,
-                    selectedRetainedDocumentID: nil,
-                    excludedDocumentIDs: [],
-                    proposedRetainedDocumentID: nil,
-                    proposedRedundantDocumentIDs: [],
-                    status: .requiresReview,
-                    rationale: "No approved retained-copy selection policy is defined. Review this duplicate group and choose a retained copy manually in a later approved milestone.",
+                    definitiveDocumentID: definitiveDocument?.id,
+                    redundantDocumentIDs: definitiveDocument.map { definitive in
+                        documents.filter { $0.id != definitive.id }.map(\.id)
+                    } ?? [],
+                    status: definitiveDocument == nil ? .needsSelection : .readyForApproval,
+                    rationale: rationale(evidencedCopyCount: evidencedCopies.count),
                     isDeterministic: true
                 )
             )
@@ -39,5 +42,15 @@ struct RecommendationService: Sendable {
             evaluatedGroupCount: groups.count,
             failureCount: failureCount
         )
+    }
+
+    private func rationale(evidencedCopyCount: Int) -> String {
+        if evidencedCopyCount == 1 {
+            return "Every file has the same content hash, and approved evidence identifies exactly one definitive copy. Every other byte-identical file is a redundant archive candidate."
+        }
+        if evidencedCopyCount > 1 {
+            return "Every file has the same content hash, but approved evidence identifies more than one possible definitive copy. Select exactly one definitive copy."
+        }
+        return "Every file has the same content hash, but no approved deterministic rule identifies one definitive copy. Select exactly one definitive copy."
     }
 }

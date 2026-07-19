@@ -34,21 +34,23 @@ The inventory shall include sufficient metadata to support recommendation genera
 
 ---
 
-## RQ-003 — Recommendation Engine
+## RQ-003 — Exact Duplicate Archival Proposals
 
-The application shall analyse the Scan Session and produce consolidation recommendations.
+DocumentConsolidate identifies byte-identical duplicate files, establishes one definitive retained copy for each duplicate group, and archives the redundant copies after explicit user approval. It does not merge documents, interpret semantic similarity, reorganise unique documents, or provide general document-management functionality in Release 1.
 
-Recommendations shall be deterministic.
+Duplicate grouping and archive proposals shall be deterministic.
 
-Identical inputs shall produce identical recommendations.
+Identical inputs shall produce identical grouping and proposal output.
+
+Unique files receive no duplicate archive proposal or archive-plan operation. A definitive copy may be proposed automatically only through an approved deterministic rule; otherwise, the user selects exactly one definitive copy. Every other file in that exact duplicate group becomes a redundant archive candidate. Release 1 does not support excluding individual files from a duplicate group.
 
 ---
 
 ## RQ-004 — User Review
 
-Recommendations shall never be executed automatically.
+Archive proposals shall never be executed automatically.
 
-Users shall explicitly review and approve execution.
+Approval applies only to archival of redundant byte-identical copies. Rejected, postponed, and Needs Selection groups shall not enter the archive plan.
 
 ---
 

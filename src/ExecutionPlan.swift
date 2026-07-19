@@ -1,9 +1,9 @@
-// 2026-07-19 11:00 SGT
+// 2026-07-19 17:25 SGT
 
 import Foundation
 
 enum ExecutionOperationType: String, Sendable {
-    case consolidateDuplicate = "Consolidate Duplicate"
+    case archiveRedundantCopy = "Archive Redundant Copy"
 }
 
 enum ExecutionStatus: String, Sendable {
@@ -21,11 +21,11 @@ struct PlannedOperation: Identifiable, Equatable, Sendable {
     let type: ExecutionOperationType
     let sourceDocument: DocumentRecord?
     let destination: URL?
-    let destinationDocumentID: UUID?
+    let definitiveDocument: DocumentRecord
     let reason: String
     let recommendationID: String
     let expectedHash: String?
-    let expectedDestinationHash: String?
+    let expectedDefinitiveHash: String
     let executionStatus: ExecutionStatus
     var validationStatus: OperationValidationStatus
     var validationIssues: [String]
@@ -39,5 +39,10 @@ struct ExecutionPlan: Identifiable, Equatable, Sendable {
     var validOperationCount: Int { operations.filter { $0.validationStatus == .valid }.count }
     var invalidOperationCount: Int { operations.filter { $0.validationStatus == .invalid }.count }
     var pendingOperationCount: Int { operations.filter { $0.validationStatus == .pending }.count }
-    var isReady: Bool { !operations.isEmpty && invalidOperationCount == 0 && pendingOperationCount == 0 }
+    var isReady: Bool {
+        !operations.isEmpty
+            && operations.allSatisfy { $0.destination != nil }
+            && invalidOperationCount == 0
+            && pendingOperationCount == 0
+    }
 }

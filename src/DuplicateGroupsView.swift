@@ -1,4 +1,4 @@
-// 2026-07-19 16:12 SGT
+// 2026-07-19 17:25 SGT
 
 import SwiftUI
 
@@ -60,7 +60,7 @@ struct DuplicateGroupDetailView: View {
                 Divider()
                 ForEach(group.documents) { document in
                     VStack(alignment: .leading, spacing: 2) {
-                        Label(document.filename, systemImage: document.isPreferredCopy ? "checkmark.circle" : "doc")
+                        Label(document.filename, systemImage: document.hasApprovedDefinitiveCopyEvidence ? "checkmark.circle" : "doc")
                         Text(document.url.path(percentEncoded: false))
                             .font(.caption)
                             .foregroundStyle(.secondary)
