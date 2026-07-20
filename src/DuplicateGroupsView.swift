@@ -1,10 +1,14 @@
-// 2026-07-19 17:25 SGT
+// 2026-07-20 13:24 SGT
 
 import SwiftUI
 
 struct DuplicateGroupSummary: Identifiable {
     let id: String
     let documents: [DocumentRecord]
+
+    var displayName: String {
+        documents.first?.filename ?? "Duplicate Group"
+    }
 
     var folderPaths: String {
         Set(documents.map { $0.url.deletingLastPathComponent().path(percentEncoded: false) })
@@ -20,20 +24,36 @@ struct DuplicateGroupsView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             StageHeading("Duplicate groups", subtitle: "Select a group to review its documents.")
-            List(groups, selection: $selectedGroupID) { group in
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack {
-                        Text(group.id.prefix(12)).font(.body.monospaced())
-                        Spacer()
-                        Text("\(group.documents.count) copies").foregroundStyle(.secondary)
+            if groups.isEmpty {
+                ContentUnavailableView(
+                    "No Duplicate Groups",
+                    systemImage: "doc.on.doc",
+                    description: Text("Byte-identical groups found during a scan will appear here.")
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                List(groups, selection: $selectedGroupID) { group in
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(alignment: .firstTextBaseline) {
+                            Text(group.displayName)
+                                .fontWeight(.medium)
+                                .lineLimit(1)
+                            Spacer()
+                            Text("\(group.documents.count) copies")
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(.secondary)
+                                .padding(.horizontal, 7)
+                                .padding(.vertical, 3)
+                                .background(.quaternary, in: Capsule())
+                        }
+                        Text(group.folderPaths)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
                     }
-                    Text(group.folderPaths)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
+                    .tag(group.id)
                 }
-                .tag(group.id)
             }
         }
         .padding()
@@ -53,10 +73,15 @@ struct DuplicateGroupDetailView: View {
     let group: DuplicateGroupSummary?
 
     var body: some View {
-        DetailShell(title: group.map { "Duplicate group \($0.id.prefix(12))" } ?? "No duplicate group selected") {
+        DetailShell(title: group?.displayName ?? "No duplicate group selected") {
             if let group {
-                DetailField("SHA-256", value: group.id, monospaced: true)
-                DetailField("Locations", value: group.folderPaths)
+                HStack {
+                    Label("Verified byte-identical", systemImage: "checkmark.seal.fill")
+                        .foregroundStyle(.green)
+                    Spacer()
+                    Text("\(group.documents.count) copies")
+                        .foregroundStyle(.secondary)
+                }
                 Divider()
                 ForEach(group.documents) { document in
                     VStack(alignment: .leading, spacing: 2) {
@@ -68,6 +93,8 @@ struct DuplicateGroupDetailView: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
+                Divider()
+                DetailField("Content hash", value: group.id, monospaced: true)
             }
         }
     }

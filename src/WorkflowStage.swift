@@ -1,4 +1,4 @@
-// 2026-07-19 17:25 SGT
+// 2026-07-20 13:24 SGT
 
 import SwiftUI
 
@@ -32,6 +32,7 @@ struct WorkflowStageRow: View {
         Label {
             VStack(alignment: .leading, spacing: 2) {
                 Text(stage.rawValue)
+                    .fontWeight(.medium)
                 Text(status)
                     .font(.caption)
                     .foregroundStyle(.secondary)

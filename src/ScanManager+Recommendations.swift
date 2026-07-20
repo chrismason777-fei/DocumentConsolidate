@@ -1,8 +1,13 @@
-// 2026-07-19 17:25 SGT
+// 2026-07-20 14:22 SGT
 
 import Foundation
 
 extension ScanManager {
+    func resetDecisions() {
+        inventory.resetRecommendationReview()
+        refreshRecommendationSummary()
+    }
+
     func approveArchival(id: String) async {
         guard recommendations.first(where: { $0.id == id })?.isReadyForApproval == true else { return }
         guard inventory.updateRecommendationDecision(id: id, decision: .approved) else { return }

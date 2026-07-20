@@ -1,4 +1,4 @@
-// 2026-07-19 17:25 SGT
+// 2026-07-20 14:22 SGT
 
 import SwiftUI
 
@@ -10,32 +10,44 @@ struct RecommendationReviewView: View {
         VStack(alignment: .leading, spacing: 12) {
             StageHeading("Duplicate Archival", subtitle: "Select definitive copies and approve archival of byte-identical redundant copies.")
             if let session = scanManager.currentSession {
-                HStack(spacing: 16) {
-                    LabeledContent("Needs Selection", value: session.groupsRequiringReviewCount.formatted())
-                    LabeledContent("Ready", value: readyCount.formatted())
-                    LabeledContent("Approved", value: session.acceptedRecommendationCount.formatted())
-                    LabeledContent("Rejected", value: session.rejectedRecommendationCount.formatted())
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 16) { summary(session) }
+                    VStack(alignment: .leading, spacing: 6) { summary(session) }
                 }
             }
-            List(scanManager.recommendations, selection: $selectedRecommendationID) { proposal in
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Text(groupTitle(proposal))
-                        Spacer()
-                        Text(proposal.decision.rawValue).foregroundStyle(decisionColor(proposal.decision))
-                    }
-                    Text("\(groupDocuments(for: proposal).count) byte-identical files")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    HStack {
-                        Text(displayState(proposal))
-                        Spacer()
-                        Text(proposal.decision == .approved && proposal.isReadyForApproval ? "Archive plan eligible" : "Not in archive plan")
-                    }
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+            HStack {
+                Spacer()
+                Button("Reset Decisions", systemImage: "arrow.counterclockwise") {
+                    scanManager.resetDecisions()
                 }
-                .tag(proposal.id)
+                .disabled(!hasReviewState)
+            }
+            if scanManager.recommendations.isEmpty {
+                ContentUnavailableView(
+                    "No Duplicate Groups to Review",
+                    systemImage: "checklist",
+                    description: Text("Scan folders to find byte-identical copies requiring a definitive selection.")
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                List(scanManager.recommendations, selection: $selectedRecommendationID) { proposal in
+                    VStack(alignment: .leading, spacing: 5) {
+                        HStack(alignment: .firstTextBaseline) {
+                            Text(groupTitle(proposal))
+                                .fontWeight(.medium)
+                                .lineLimit(1)
+                            Spacer()
+                            statusBadge(displayState(proposal), color: decisionColor(proposal.decision))
+                        }
+                        Text("\(groupDocuments(for: proposal).count) byte-identical copies")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Text(proposal.decision == .approved && proposal.isReadyForApproval ? "Included in Archive Plan" : "Not included in Archive Plan")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .tag(proposal.id)
+                }
             }
         }
         .padding()
@@ -44,6 +56,28 @@ struct RecommendationReviewView: View {
 
     private var readyCount: Int {
         scanManager.recommendations.filter { $0.isReadyForApproval && $0.decision == .pending }.count
+    }
+
+    private var hasReviewState: Bool {
+        scanManager.executionPlan != nil || scanManager.recommendations.contains {
+            $0.definitiveDocumentID != nil || $0.decision != .pending
+        }
+    }
+
+    @ViewBuilder private func summary(_ session: ScanSession) -> some View {
+        LabeledContent("Needs Selection", value: session.groupsRequiringReviewCount.formatted())
+        LabeledContent("Ready for Approval", value: readyCount.formatted())
+        LabeledContent("Approved", value: session.acceptedRecommendationCount.formatted())
+        LabeledContent("Rejected", value: session.rejectedRecommendationCount.formatted())
+    }
+
+    private func statusBadge(_ text: String, color: Color) -> some View {
+        Text(text)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(color)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background(color.opacity(0.12), in: Capsule())
     }
 
     private func groupDocuments(for proposal: DuplicateRecommendation) -> [DocumentRecord] {
@@ -95,10 +129,17 @@ struct RecommendationDetailView: View {
     }
 
     @ViewBuilder private func groupSummary(_ proposal: DuplicateRecommendation) -> some View {
-        Text("Duplicate Group Summary").font(.headline)
-        LabeledContent("Identical files", value: groupDocuments(for: proposal).count.formatted())
-        LabeledContent("Hash verification", value: "Verified byte-identical")
-        LabeledContent("Current state", value: proposal.decision == .pending ? proposal.status.rawValue : proposal.decision.rawValue)
+        HStack {
+            Label("Verified byte-identical", systemImage: "checkmark.seal.fill")
+                .foregroundStyle(.green)
+            Spacer()
+            Text(proposal.decision == .pending ? proposal.status.rawValue : proposal.decision.rawValue)
+                .font(.caption.weight(.semibold))
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(.quaternary, in: Capsule())
+        }
+        LabeledContent("Copies", value: groupDocuments(for: proposal).count.formatted())
         Text("Content hash: \(proposal.duplicateGroupIdentifier)")
             .font(.caption.monospaced())
             .foregroundStyle(.secondary)
@@ -107,16 +148,24 @@ struct RecommendationDetailView: View {
     @ViewBuilder private func definitiveCopy(_ proposal: DuplicateRecommendation) -> some View {
         Text("Definitive Copy").font(.headline)
         if proposal.status == .needsSelection || proposal.isManuallySelected {
-            Text("Select exactly one copy to remain in place.").foregroundStyle(.secondary)
+            Text("Select exactly one copy to remain in its current location.").foregroundStyle(.secondary)
             ForEach(groupDocuments(for: proposal)) { document in
-                Button {
-                    selectedDefinitiveID = document.id
-                } label: {
-                    Label(document.filename, systemImage: selectedDefinitiveID == document.id ? "largecircle.fill.circle" : "circle")
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                VStack(alignment: .leading, spacing: 3) {
+                    Button {
+                        selectedDefinitiveID = document.id
+                    } label: {
+                        Label(document.filename, systemImage: selectedDefinitiveID == document.id ? "largecircle.fill.circle" : "circle")
+                            .fontWeight(selectedDefinitiveID == document.id ? .semibold : .regular)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .buttonStyle(.plain)
+                    Text(document.url.path(percentEncoded: false))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                        .truncationMode(.middle)
                 }
-                .buttonStyle(.plain)
-                Text(document.url.path(percentEncoded: false)).font(.caption).foregroundStyle(.secondary)
+                .padding(.vertical, 3)
             }
             Button("Confirm Definitive Copy", systemImage: "checkmark.circle") {
                 guard let selectedDefinitiveID else { return }
@@ -143,7 +192,13 @@ struct RecommendationDetailView: View {
     }
 
     @ViewBuilder private func approval(_ proposal: DuplicateRecommendation) -> some View {
-        Text("Approval").font(.headline)
+        HStack {
+            Text("Approval").font(.headline)
+            Spacer()
+            Text(proposal.decision == .pending ? proposal.status.rawValue : proposal.decision.rawValue)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
         if proposal.decision == .approved {
             Button("Review Archive Plan", action: reviewArchivePlan).buttonStyle(.borderedProminent)
         } else if proposal.isReadyForApproval {
@@ -174,9 +229,17 @@ struct RecommendationDetailView: View {
     }
 
     private func fileCard(_ document: DocumentRecord) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text(document.filename)
-            Text(document.url.path(percentEncoded: false)).font(.caption).foregroundStyle(.secondary)
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "doc")
+                .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(document.filename).fontWeight(.medium)
+                Text(document.url.path(percentEncoded: false))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .truncationMode(.middle)
+            }
         }
         .padding(8)
         .frame(maxWidth: .infinity, alignment: .leading)

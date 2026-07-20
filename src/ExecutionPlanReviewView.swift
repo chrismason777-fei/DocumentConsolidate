@@ -1,4 +1,4 @@
-// 2026-07-19 17:25 SGT
+// 2026-07-20 14:22 SGT
 
 import SwiftUI
 
@@ -8,10 +8,10 @@ struct ExecutionPlanReviewView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            StageHeading("Archive Plan", subtitle: "Review redundant-copy archive operations and validation state.")
+            StageHeading("Archive Plan", subtitle: "Review approved redundant copies and confirm why execution is not ready.")
             planSummary
             HStack {
-                Button(scanManager.executionPlan == nil ? "Generate and Validate Archive Plan" : "Refresh Validation", systemImage: "arrow.clockwise") {
+                Button(scanManager.executionPlan == nil ? "Prepare Archive Plan" : "Refresh Validation", systemImage: "arrow.clockwise") {
                     Task { await scanManager.generateExecutionPlan() }
                 }
                 .buttonStyle(.borderedProminent)
@@ -20,21 +20,37 @@ struct ExecutionPlanReviewView: View {
                     ProgressView("Updating")
                 }
             }
-            List(scanManager.executionPlan?.operations ?? [], selection: $selectedOperationID) { operation in
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(operation.type.rawValue)
-                        Text(operation.sourceDocument?.filename ?? "Source not specified")
-                            .font(.caption)
+            if scanManager.executionPlan?.operations.isEmpty != false {
+                ContentUnavailableView(
+                    "Archive Plan Is Empty",
+                    systemImage: "list.bullet.rectangle",
+                    description: Text("Approved duplicate groups will add their redundant copies here.")
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                List(scanManager.executionPlan?.operations ?? [], selection: $selectedOperationID) { operation in
+                    HStack(spacing: 12) {
+                        Image(systemName: "archivebox")
                             .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(operation.sourceDocument?.filename ?? "Source not specified")
+                                .fontWeight(.medium)
+                            Text(operation.sourceDocument?.url.path(percentEncoded: false) ?? "Source path not specified")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                        }
+                        Spacer()
+                        Text(operation.validationStatus.rawValue)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(validationColor(operation.validationStatus))
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 3)
+                            .background(validationColor(operation.validationStatus).opacity(0.12), in: Capsule())
                     }
-                    Spacer()
-                    Text(operation.validationStatus.rawValue)
-                        .foregroundStyle(validationColor(operation.validationStatus))
+                    .tag(operation.id)
                 }
-                .tag(operation.id)
             }
         }
         .padding()
@@ -69,13 +85,10 @@ struct ExecutionOperationDetailView: View {
                 DetailField("Duplicate group", value: operation.recommendationID, monospaced: true)
                 DetailField("Redundant source", value: operation.sourceDocument?.url.path ?? "Not specified")
                 DetailField("Definitive copy", value: operation.definitiveDocument.url.path)
-                DetailField("Archive destination", value: operation.destination?.path ?? "Not yet defined")
+                DetailField("Destination", value: operation.destination?.path ?? "Not defined")
                 LabeledContent("Archive execution", value: operation.executionStatus.rawValue)
                 LabeledContent("Validation", value: operation.validationStatus.rawValue)
-                Text(operation.reason)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(nil)
-                    .fixedSize(horizontal: false, vertical: true)
+                DetailField("Reason", value: operation.reason)
                 if !operation.validationIssues.isEmpty {
                     Divider()
                     Text("Validation issues").font(.headline)
@@ -85,7 +98,7 @@ struct ExecutionOperationDetailView: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
-                Text("No filesystem changes have been made.")
+                Label("No filesystem changes have been made.", systemImage: "lock.shield")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

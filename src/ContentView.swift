@@ -1,4 +1,4 @@
-// 2026-07-19 17:25 SGT
+// 2026-07-20 13:24 SGT
 //
 //  ContentView.swift
 //  DocumentConsolidate
@@ -27,7 +27,7 @@ struct ContentView: View {
                     }
                 }
             }
-            .navigationTitle("Consolidation")
+            .navigationTitle("Document Consolidate")
             .safeAreaInset(edge: .bottom) { WorkflowStatusView() }
             .navigationSplitViewColumnWidth(min: 180, ideal: 210, max: 240)
         } content: {
@@ -67,7 +67,7 @@ struct ContentView: View {
         case .scan:
             WorkflowPlaceholderDetail(
                 title: "Analysis pipeline",
-                message: "Filesystem enumeration, document analysis, hashing, exact-duplicate detection, archival approval, and archive planning remain separate phases."
+                message: "Scan progress appears here. Your files remain unchanged while Document Consolidate identifies byte-identical copies."
             )
         case .inventory:
             DocumentDetailView(document: scanManager.documents.first { $0.id == selectedDocumentID })

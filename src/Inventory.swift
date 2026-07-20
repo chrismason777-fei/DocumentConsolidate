@@ -1,4 +1,4 @@
-// 2026-07-19 17:25 SGT
+// 2026-07-20 14:22 SGT
 
 import Foundation
 import Observation
@@ -51,6 +51,20 @@ final class Inventory {
         self.recommendations = recommendations
         executionPlan = nil
         executionPlanDecisionRevision += 1
+    }
+
+    func resetRecommendationReview() {
+        for index in recommendations.indices {
+            recommendations[index].definitiveDocumentID = nil
+            recommendations[index].redundantDocumentIDs = []
+            recommendations[index].status = .needsSelection
+            recommendations[index].rationale = "Select one definitive copy before approving archival."
+            recommendations[index].isManuallySelected = false
+            recommendations[index].decision = .pending
+        }
+        executionPlan = nil
+        executionPlanDecisionRevision += 1
+        activeExecutionPlanGeneration = nil
     }
 
     @discardableResult

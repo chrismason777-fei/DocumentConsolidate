@@ -1,4 +1,4 @@
-// 2026-07-19 17:25 SGT
+// 2026-07-20 14:22 SGT
 
 import SwiftUI
 
@@ -6,14 +6,15 @@ struct WorkflowStatusView: View {
     @Environment(ScanManager.self) private var scanManager
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Label(readiness, systemImage: readinessIcon)
-                .font(.headline)
-                .foregroundStyle(readinessColor)
+        VStack(alignment: .leading, spacing: 5) {
+            Label {
+                LabeledContent("Execution Ready", value: readiness)
+            } icon: {
+                Image(systemName: readinessIcon)
+            }
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(readinessColor)
             Text(statusSummary)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Text("No filesystem changes have been made.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -23,9 +24,9 @@ struct WorkflowStatusView: View {
     }
 
     private var readiness: String {
-        guard let plan = scanManager.executionPlan else { return "Archive plan not generated" }
-        if scanManager.inventory.isGeneratingExecutionPlan { return "Validating archive plan" }
-        return plan.isReady ? "Ready" : "Not ready"
+        guard let plan = scanManager.executionPlan else { return "No" }
+        if scanManager.inventory.isGeneratingExecutionPlan { return "Validating" }
+        return plan.isReady ? "Yes" : "No"
     }
 
     private var readinessIcon: String {
@@ -40,7 +41,6 @@ struct WorkflowStatusView: View {
         let approved = scanManager.recommendations.filter { $0.decision == .approved }.count
         let rejected = scanManager.recommendations.filter { $0.decision == .rejected }.count
         let postponed = scanManager.recommendations.filter { $0.decision == .postponed }.count
-        let invalid = scanManager.executionPlan?.invalidOperationCount ?? 0
-        return "\(approved) approved · \(rejected) rejected · \(postponed) postponed · \(invalid) invalid"
+        return "\(approved) approved · \(rejected) rejected · \(postponed) postponed"
     }
 }
