@@ -1,4 +1,4 @@
-// 2026-07-20 13:24 SGT
+// 2026-07-20 19:53 SGT
 //
 //  ContentView.swift
 //  DocumentConsolidate
@@ -80,7 +80,8 @@ struct ContentView: View {
             )
         case .executionPlan:
             ExecutionOperationDetailView(
-                operation: scanManager.executionPlan?.operations.first { $0.id == selectedOperationID }
+                operation: scanManager.executionPlan?.operations.first { $0.id == selectedOperationID },
+                planIsReady: scanManager.executionPlan?.isReady == true
             )
         }
     }
@@ -100,7 +101,7 @@ struct ContentView: View {
         case .duplicates:
             "\(duplicateGroups.count) groups"
         case .recommendations:
-            "\(scanManager.recommendations.filter { $0.decision == .approved }.count) approved"
+            recommendationStatus
         case .executionPlan:
             executionPlanStatus
         }
@@ -109,7 +110,18 @@ struct ContentView: View {
     private var executionPlanStatus: String {
         guard let plan = scanManager.executionPlan else { return "Not generated" }
         if scanManager.inventory.isGeneratingExecutionPlan { return "Validating" }
-        return plan.invalidOperationCount == 0 ? "Valid" : "\(plan.invalidOperationCount) invalid"
+        if plan.isReady { return "Execution ready" }
+        if plan.invalidOperationCount > 0 { return "\(plan.invalidOperationCount) invalid" }
+        if plan.operations.contains(where: { $0.destination == nil }) { return "Destination required" }
+        return "Not ready"
+    }
+
+    private var recommendationStatus: String {
+        let attention = scanManager.recommendations.filter { $0.status == .needsSelection }.count
+        if attention > 0 { return "\(attention) need selection" }
+        let ready = scanManager.recommendations.filter { $0.isReadyForApproval && $0.decision == .pending }.count
+        if ready > 0 { return "\(ready) ready to approve" }
+        return "\(scanManager.recommendations.filter { $0.decision == .approved }.count) approved"
     }
 }
 
