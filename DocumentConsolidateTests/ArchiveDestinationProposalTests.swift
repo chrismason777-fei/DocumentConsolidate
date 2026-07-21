@@ -16,7 +16,7 @@ struct ArchiveDestinationProposalTests {
         )
         let proposed = destination("Proposed")
 
-        let result = await manager.generateExecutionPlan(for: proposed)
+        let result = await manager.generateExecutionPlan(for: proposed, destinationAccess: PassthroughAccess())
         let candidate = try #require(result.success)
 
         #expect(candidate.destination == proposed)
@@ -34,7 +34,7 @@ struct ArchiveDestinationProposalTests {
         manager.inventory.replaceArchivePlanningState(with: accepted)
         let proposed = destination("Replacement")
 
-        let result = await manager.generateExecutionPlan(for: proposed)
+        let result = await manager.generateExecutionPlan(for: proposed, destinationAccess: PassthroughAccess())
         let replacement = try #require(result.success)
 
         #expect(manager.inventory.archivePlanningState == replacement)
@@ -51,7 +51,10 @@ struct ArchiveDestinationProposalTests {
         )
         manager.inventory.replaceArchivePlanningState(with: accepted)
 
-        let result = await manager.generateExecutionPlan(for: destination("Rejected"))
+        let result = await manager.generateExecutionPlan(
+            for: destination("Rejected"),
+            destinationAccess: PassthroughAccess()
+        )
 
         #expect(result == .failure(.validationFailed))
         #expect(manager.inventory.archivePlanningState == accepted)
@@ -90,7 +93,7 @@ struct ArchiveDestinationProposalTests {
             )
         )
 
-        let result = await manager.generateExecutionPlan()
+        let result = await manager.generateExecutionPlan(destinationAccess: PassthroughAccess())
         let refreshed = try #require(result.success)
 
         #expect(refreshed.destination == acceptedDestination)
@@ -187,5 +190,15 @@ private extension Result {
     var success: Success? {
         guard case let .success(value) = self else { return nil }
         return value
+    }
+}
+
+private struct PassthroughAccess: ArchiveDestinationAccessProviding {
+    func authorize(selectedURL: URL, scanRoots: [URL]) throws -> ArchiveDestination {
+        ArchiveDestination(canonicalRootURL: selectedURL, securityScopedBookmarkData: nil)
+    }
+
+    func withAccess<T>(to destination: ArchiveDestination, operation: (URL) throws -> T) throws -> T {
+        try operation(destination.canonicalRootURL)
     }
 }

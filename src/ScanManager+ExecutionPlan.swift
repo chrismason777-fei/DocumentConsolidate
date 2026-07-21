@@ -1,10 +1,12 @@
-// 2026-07-21 18:03 SGT
+// 2026-07-21 18:14 SGT
 
 import Foundation
 
 enum ArchivePlanningLifecycleError: Error, Equatable, Sendable {
     case noScanSession
     case cancelled
+    case destinationAccess(ArchiveDestinationAccessError)
+    case destinationAccessFailed
     case validationFailed
     case staleGeneration
 }
@@ -16,6 +18,16 @@ extension ScanManager {
     }
 
     @discardableResult
+    func generateExecutionPlan<Access: ArchiveDestinationAccessProviding>(
+        destinationAccess: Access
+    ) async -> Result<ArchivePlanningState, ArchivePlanningLifecycleError> {
+        await generateExecutionPlan(
+            for: inventory.archiveDestination,
+            destinationAccess: destinationAccess
+        )
+    }
+
+    @discardableResult
     func clearArchiveDestination() async -> Result<ArchivePlanningState, ArchivePlanningLifecycleError> {
         await generateExecutionPlan(for: nil)
     }
@@ -24,17 +36,44 @@ extension ScanManager {
     func generateExecutionPlan(
         for proposedDestination: ArchiveDestination?
     ) async -> Result<ArchivePlanningState, ArchivePlanningLifecycleError> {
+        await generateExecutionPlan(
+            for: proposedDestination,
+            destinationAccess: ArchiveDestinationAccess()
+        )
+    }
+
+    @discardableResult
+    func generateExecutionPlan<Access: ArchiveDestinationAccessProviding>(
+        for proposedDestination: ArchiveDestination?,
+        destinationAccess: Access
+    ) async -> Result<ArchivePlanningState, ArchivePlanningLifecycleError> {
         guard let session = currentSession else { return .failure(.noScanSession) }
         let generation = inventory.beginExecutionPlanGeneration()
-        let plan = ExecutionPlanService().generate(
-            recommendations: recommendations,
-            documents: documents,
-            scanRoots: selectedRootFolders,
-            archiveDestination: proposedDestination,
-            scanSessionID: session.id,
-            decisionRevision: generation.decisionRevision,
-            createdAt: Date()
-        )
+        let derivePlan = {
+            ExecutionPlanService().generate(
+                recommendations: self.recommendations,
+                documents: self.documents,
+                scanRoots: self.selectedRootFolders,
+                archiveDestination: proposedDestination,
+                scanSessionID: session.id,
+                decisionRevision: generation.decisionRevision,
+                createdAt: Date()
+            )
+        }
+        let plan: ExecutionPlan
+        do {
+            if let proposedDestination {
+                plan = try destinationAccess.withAccess(to: proposedDestination) { _ in derivePlan() }
+            } else {
+                plan = derivePlan()
+            }
+        } catch let error as ArchiveDestinationAccessError {
+            inventory.cancelExecutionPlanGeneration(generation.generation)
+            return .failure(.destinationAccess(error))
+        } catch {
+            inventory.cancelExecutionPlanGeneration(generation.generation)
+            return .failure(.destinationAccessFailed)
+        }
         guard !Task.isCancelled else {
             inventory.cancelExecutionPlanGeneration(generation.generation)
             return .failure(.cancelled)

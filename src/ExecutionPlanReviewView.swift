@@ -1,10 +1,11 @@
-// 2026-07-21 11:50 SGT
+// 2026-07-21 18:23 SGT
 
 import SwiftUI
 
 struct ExecutionPlanReviewView: View {
     @Environment(ScanManager.self) private var scanManager
     @Binding var selectedOperationID: String?
+    @State private var destinationError: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -14,6 +15,8 @@ struct ExecutionPlanReviewView: View {
             )
             .padding(20)
             metrics.padding(.horizontal, 20).padding(.bottom, 18)
+            ArchiveDestinationSection(errorMessage: $destinationError)
+                .padding(.horizontal, 20).padding(.bottom, 16)
             HStack {
                 VStack(alignment: .leading, spacing: 3) {
                     Text("PLANNED ARCHIVAL").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
@@ -21,7 +24,7 @@ struct ExecutionPlanReviewView: View {
                 }
                 Spacer()
                 Button(scanManager.executionPlan == nil ? "Prepare Archive Plan" : "Refresh Validation", systemImage: "arrow.clockwise") {
-                    Task { await scanManager.generateExecutionPlan() }
+                    refreshPlan()
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(scanManager.currentSession == nil || scanManager.inventory.isGeneratingExecutionPlan)
@@ -51,6 +54,18 @@ struct ExecutionPlanReviewView: View {
             WorkflowMetricCard(value: (scanManager.executionPlan?.operations.count ?? 0).formatted(), label: "Planned archives", color: .indigo)
             WorkflowMetricCard(value: (scanManager.executionPlan?.validOperationCount ?? 0).formatted(), label: "Validated", color: .green)
             WorkflowMetricCard(value: readiness, label: "Execution ready", color: readinessColor)
+        }
+    }
+
+    private func refreshPlan() {
+        guard scanManager.inventory.archiveDestination != nil else {
+            destinationError = "Choose an Archive Destination before preparing or refreshing the plan."
+            return
+        }
+        Task {
+            destinationError = ArchiveDestinationPresentation.message(
+                for: await scanManager.generateExecutionPlan()
+            )
         }
     }
 

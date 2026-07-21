@@ -1,12 +1,12 @@
-// 2026-07-21 11:28 SGT
+// 2026-07-21 18:35 SGT
 
 import SwiftUI
 
 struct RecommendationReviewView: View {
     @Environment(ScanManager.self) private var scanManager
     @Binding var selectedRecommendationID: String?
+    @Binding var isResetAllConfirmationPresented: Bool
     let reviewArchivePlan: () -> Void
-    @State private var isResetAllConfirmationPresented = false
     @State private var resetError: String?
 
     var body: some View {
@@ -50,16 +50,6 @@ struct RecommendationReviewView: View {
         }
         .background(Color(nsColor: .controlBackgroundColor))
         .navigationTitle("Duplicate Archival")
-        .toolbar {
-            Menu {
-                Button("Reset All Decisions…", systemImage: "arrow.counterclockwise") {
-                    isResetAllConfirmationPresented = true
-                }
-                .disabled(!hasReviewState || scanManager.inventory.isGeneratingExecutionPlan)
-            } label: {
-                Label("More", systemImage: "ellipsis.circle")
-            }
-        }
         .alert("Reset all duplicate-group decisions?", isPresented: $isResetAllConfirmationPresented) {
             Button("Reset All Decisions", role: .destructive) { Task { await resetAllDecisions() } }
             Button("Cancel", role: .cancel) {}
@@ -97,9 +87,6 @@ struct RecommendationReviewView: View {
     private var approvedCount: Int { scanManager.recommendations.filter { $0.decision == .approved }.count }
     private var hasPendingDecisions: Bool {
         scanManager.recommendations.contains { $0.decision == .pending }
-    }
-    private var hasReviewState: Bool {
-        scanManager.recommendations.contains { scanManager.recommendationDiffersFromBaseline(id: $0.id) }
     }
     private func groupDocuments(for proposal: DuplicateRecommendation) -> [DocumentRecord] {
         scanManager.documents.filter { $0.duplicateGroupIdentifier == proposal.duplicateGroupIdentifier }

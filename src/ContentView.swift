@@ -1,4 +1,4 @@
-// 2026-07-21 11:28 SGT
+// 2026-07-21 18:35 SGT
 //
 //  ContentView.swift
 //  DocumentConsolidate
@@ -13,6 +13,7 @@ struct ContentView: View {
     @State private var selectedStage: WorkflowStage? = .prepareScan
     @State private var selectedRecommendationID: String?
     @State private var selectedOperationID: String?
+    @State private var isResetAllConfirmationPresented = false
 
     var body: some View {
         NavigationSplitView {
@@ -36,6 +37,17 @@ struct ContentView: View {
                 .navigationSplitViewColumnWidth(min: 360, ideal: 480)
         }
         .frame(minWidth: 980, minHeight: 620)
+        .toolbar {
+            Menu {
+                Button("Reset All Decisions…", systemImage: "arrow.counterclockwise") {
+                    isResetAllConfirmationPresented = true
+                }
+                .disabled(!hasRecommendationReviewState || scanManager.inventory.isGeneratingExecutionPlan)
+            } label: {
+                Label("More", systemImage: "ellipsis.circle")
+            }
+            .disabled(selectedStage != .recommendations)
+        }
     }
 
     @ViewBuilder private var contentView: some View {
@@ -45,6 +57,7 @@ struct ContentView: View {
         case .recommendations:
             RecommendationReviewView(
                 selectedRecommendationID: $selectedRecommendationID,
+                isResetAllConfirmationPresented: $isResetAllConfirmationPresented,
                 reviewArchivePlan: { selectedStage = .executionPlan }
             )
         case .executionPlan:
@@ -100,6 +113,10 @@ struct ContentView: View {
         let ready = scanManager.recommendations.filter { $0.isReadyForApproval && $0.decision == .pending }.count
         if ready > 0 { return "\(ready) ready to approve" }
         return "\(scanManager.recommendations.filter { $0.decision == .approved }.count) approved"
+    }
+
+    private var hasRecommendationReviewState: Bool {
+        scanManager.recommendations.contains { scanManager.recommendationDiffersFromBaseline(id: $0.id) }
     }
 }
 
