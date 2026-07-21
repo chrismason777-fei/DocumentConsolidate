@@ -1,4 +1,6 @@
-// 2026-07-19 13:45 SGT
+// 2026-07-21 17:27 SGT
+
+import Foundation
 
 extension ScanManager {
     func generateExecutionPlan() async {
@@ -7,7 +9,11 @@ extension ScanManager {
         let plan = ExecutionPlanService().generate(
             recommendations: recommendations,
             documents: documents,
-            scanSessionID: session.id
+            scanRoots: selectedRootFolders,
+            archiveDestination: inventory.archiveDestination,
+            scanSessionID: session.id,
+            decisionRevision: generation.decisionRevision,
+            createdAt: Date()
         )
         inventory.replaceExecutionPlan(with: plan)
         let validatedPlan = await ExecutionPlanValidator().validate(

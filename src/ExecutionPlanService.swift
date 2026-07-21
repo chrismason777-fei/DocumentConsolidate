@@ -1,12 +1,39 @@
-// 2026-07-19 17:25 SGT
+// 2026-07-21 17:27 SGT
 
 import Foundation
 
 struct ExecutionPlanService: Sendable {
+    private let destinationDerivation: ArchiveDestinationDerivation
+
+    init(destinationDerivation: ArchiveDestinationDerivation = ArchiveDestinationDerivation()) {
+        self.destinationDerivation = destinationDerivation
+    }
+
     func generate(
         recommendations: [DuplicateRecommendation],
         documents: [DocumentRecord],
         scanSessionID: UUID
+    ) -> ExecutionPlan {
+        generate(
+            recommendations: recommendations,
+            documents: documents,
+            scanRoots: [],
+            archiveDestination: nil,
+            scanSessionID: scanSessionID,
+            decisionRevision: 0,
+            createdAt: .distantPast
+        )
+    }
+
+    func generate(
+        recommendations: [DuplicateRecommendation],
+        documents: [DocumentRecord],
+        scanRoots: [URL],
+        archiveDestination: ArchiveDestination?,
+        scanSessionID: UUID,
+        decisionRevision: Int,
+        createdAt: Date,
+        calendar: Calendar = .current
     ) -> ExecutionPlan {
         let approved = recommendations
             .filter { $0.decision == .approved && $0.isReadyForApproval }
@@ -40,10 +67,24 @@ struct ExecutionPlanService: Sendable {
             }
         }
 
+        if let archiveDestination {
+            operations = destinationDerivation.derive(
+                operations: operations,
+                scanRoots: scanRoots,
+                destination: archiveDestination,
+                sessionID: scanSessionID,
+                createdAt: createdAt,
+                calendar: calendar
+            )
+        }
+
         return ExecutionPlan(
             id: approved.map(\.id).joined(separator: "|"),
             scanSessionID: scanSessionID,
-            operations: operations
+            operations: operations,
+            destinationRoot: archiveDestination?.canonicalRootURL,
+            decisionRevision: decisionRevision,
+            createdAt: createdAt
         )
     }
 
