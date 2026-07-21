@@ -18,7 +18,7 @@ struct DuplicateArchivalWorkflowTests {
         #expect(manager.recommendations[0].decision == .approved)
         #expect(manager.recommendations[0].definitiveDocumentID == group.documents[0].id)
         #expect(manager.inventory.executionPlanDecisionRevision == revision + 1)
-        #expect(manager.executionPlan?.operations.count == 1)
+        #expect(manager.executionPlan == nil)
         #expect(manager.currentSession?.acceptedRecommendationCount == 1)
     }
 

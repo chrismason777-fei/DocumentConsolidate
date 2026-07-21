@@ -166,8 +166,7 @@ struct DocumentConsolidateTests {
         let expected = RecommendationService().generate(from: [firstGroup]).recommendations[0]
         #expect(manager.recommendations.first { $0.id == firstGroup.identifier } == expected)
         #expect(manager.recommendations.first { $0.id == secondGroup.identifier } == preserved)
-        #expect(manager.executionPlan?.operations.allSatisfy { $0.recommendationID == secondGroup.identifier } == true)
-        #expect(manager.executionPlan?.operations.count == secondGroup.documents.count - 1)
+        #expect(manager.executionPlan == nil)
         #expect(manager.currentSession?.acceptedRecommendationCount == 1)
     }
 
@@ -259,9 +258,10 @@ struct DocumentConsolidateTests {
         let secondURL = testDirectory.appending(path: "second.txt")
         try bytes.write(to: firstURL)
         try bytes.write(to: secondURL)
-        let group = DuplicateGroup(identifier: "reset-stale", documents: [
-            record(id: "EEEEEEEE-EEEE-EEEE-EEEE-EEEEEEEEEEE1", name: "first.txt", hash: "reset-stale", url: firstURL),
-            record(id: "EEEEEEEE-EEEE-EEEE-EEEE-EEEEEEEEEEE2", name: "second.txt", hash: "reset-stale", url: secondURL)
+        let contentHash = try await DocumentContentHasher.hash(fileAt: firstURL)
+        let group = DuplicateGroup(identifier: contentHash, documents: [
+            record(id: "EEEEEEEE-EEEE-EEEE-EEEE-EEEEEEEEEEE1", name: "first.txt", hash: contentHash, url: firstURL),
+            record(id: "EEEEEEEE-EEEE-EEEE-EEEE-EEEEEEEEEEE2", name: "second.txt", hash: contentHash, url: secondURL)
         ])
         let manager = configuredManager(groups: [group])
         await manager.approveArchival(id: group.identifier, definitiveDocumentID: group.documents[0].id)

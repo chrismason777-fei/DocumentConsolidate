@@ -96,7 +96,7 @@ struct ArchivePlanningStateOwnershipTests {
             with: ArchivePlanningState(plan: makePlan(id: "prior"), destination: destination)
         )
         let generation = inventory.beginExecutionPlanGeneration()
-        let replacement = makePlan(id: "validated")
+        let replacement = makePlan(id: "validated", decisionRevision: generation.decisionRevision)
 
         inventory.finishExecutionPlanGeneration(
             with: replacement,
@@ -108,8 +108,13 @@ struct ArchivePlanningStateOwnershipTests {
         #expect(inventory.archiveDestination == destination)
     }
 
-    private func makePlan(id: String) -> ExecutionPlan {
-        ExecutionPlan(id: id, scanSessionID: sessionID, operations: [])
+    private func makePlan(id: String, decisionRevision: Int = 0) -> ExecutionPlan {
+        ExecutionPlan(
+            id: id,
+            scanSessionID: sessionID,
+            operations: [],
+            decisionRevision: decisionRevision
+        )
     }
 
     private func makeDestination() -> ArchiveDestination {

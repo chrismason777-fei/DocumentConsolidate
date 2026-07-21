@@ -1,7 +1,13 @@
-// 2026-07-21 16:46 SGT
+// 2026-07-21 17:46 SGT
 
 import Foundation
 import Observation
+
+enum ArchivePlanningAcceptanceResult: Equatable, Sendable {
+    case accepted
+    case validationFailed
+    case staleGeneration
+}
 
 @MainActor
 @Observable
@@ -160,12 +166,37 @@ final class Inventory {
         generation: Int,
         decisionRevision: Int
     ) {
-        guard activeExecutionPlanGeneration == generation,
-              executionPlanDecisionRevision == decisionRevision else { return }
-        archivePlanningState = ArchivePlanningState(
-            plan: executionPlan,
-            destination: archivePlanningState?.destination
+        _ = acceptArchivePlanningState(
+            ArchivePlanningState(plan: executionPlan, destination: archivePlanningState?.destination),
+            generation: generation,
+            decisionRevision: decisionRevision
         )
+    }
+
+    func acceptArchivePlanningState(
+        _ candidate: ArchivePlanningState,
+        generation: Int,
+        decisionRevision: Int
+    ) -> ArchivePlanningAcceptanceResult {
+        guard activeExecutionPlanGeneration == generation else {
+            return .staleGeneration
+        }
+        guard executionPlanDecisionRevision == decisionRevision,
+              candidate.plan.decisionRevision == decisionRevision else {
+            activeExecutionPlanGeneration = nil
+            return .staleGeneration
+        }
+        guard candidate.plan.invalidOperationCount == 0 else {
+            activeExecutionPlanGeneration = nil
+            return .validationFailed
+        }
+        archivePlanningState = candidate
+        activeExecutionPlanGeneration = nil
+        return .accepted
+    }
+
+    func cancelExecutionPlanGeneration(_ generation: Int) {
+        guard activeExecutionPlanGeneration == generation else { return }
         activeExecutionPlanGeneration = nil
     }
 
@@ -188,7 +219,6 @@ final class Inventory {
     }
 
     private func invalidateExecutionPlan() {
-        archivePlanningState = nil
         executionPlanDecisionRevision += 1
         activeExecutionPlanGeneration = nil
     }
