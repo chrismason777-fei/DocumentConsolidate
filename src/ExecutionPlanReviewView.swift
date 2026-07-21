@@ -1,4 +1,4 @@
-// 2026-07-21 10:29 SGT
+// 2026-07-21 11:50 SGT
 
 import SwiftUI
 
@@ -9,7 +9,6 @@ struct ExecutionPlanReviewView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             WorkflowStageBanner(
-                stage: "STAGE 5 OF 5",
                 title: "Archive Plan",
                 subtitle: "Review what stays, what would be archived, and what prevents safe execution."
             )
@@ -104,10 +103,7 @@ struct ExecutionOperationDetailView: View {
             if let operation {
                 VStack(alignment: .leading, spacing: 22) {
                     header(operation)
-                    HStack(spacing: 12) {
-                        WorkflowMetricCard(value: operation.validationStatus.rawValue, label: "Operation validation", color: validationColor(operation.validationStatus))
-                        WorkflowMetricCard(value: planIsReady ? "Yes" : "No", label: "Execution ready", color: planIsReady ? .green : .orange)
-                    }
+                    operationStatus(operation)
                     Text("PLANNED OUTCOME").font(.caption.weight(.bold)).tracking(1).foregroundStyle(.secondary)
                     WorkflowOutcomeCard(outcome: "KEEP", document: operation.definitiveDocument, color: .indigo, isSelected: true)
                     if let source = operation.sourceDocument {
@@ -117,19 +113,18 @@ struct ExecutionOperationDetailView: View {
                     }
                     operationDetails(operation)
                     validationEvidence(operation)
-                    if !planIsReady {
-                        Label(executionBlocker(operation), systemImage: "exclamationmark.circle.fill")
-                            .font(.subheadline.weight(.semibold)).foregroundStyle(blockerColor(operation))
-                    }
                     Text("Archive Plan is for review only. No filesystem changes have been made.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
-                .padding(28).frame(maxWidth: 720, alignment: .leading)
+                .padding(28)
+                .frame(maxWidth: 720, alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
             } else {
                 ContentUnavailableView("No archive operation selected", systemImage: "archivebox")
                     .frame(maxWidth: .infinity, minHeight: 420)
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
     private func header(_ operation: PlannedOperation) -> some View {
@@ -139,15 +134,32 @@ struct ExecutionOperationDetailView: View {
                 Text("Approved for the Archive Plan; review validation before execution.").foregroundStyle(.secondary)
             }
             Spacer()
-            WorkflowStatusBadge(text: planIsReady ? "Execution ready" : "Attention required", color: planIsReady ? .green : .orange)
+            WorkflowStatusBadge(text: statusBadge(operation), color: statusColor(operation))
         }
+    }
+
+    private func operationStatus(_ operation: PlannedOperation) -> some View {
+        let presentation = statusPresentation(operation)
+        return HStack(alignment: .top, spacing: 12) {
+            Image(systemName: presentation.icon).font(.title3).foregroundStyle(presentation.color).frame(width: 25)
+            VStack(alignment: .leading, spacing: 5) {
+                Text("OPERATION STATUS").font(.caption.weight(.bold)).tracking(1).foregroundStyle(.secondary)
+                Text(presentation.title).font(.headline).foregroundStyle(presentation.color)
+                Text(presentation.message).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                if let guidance = presentation.guidance {
+                    Text(guidance).font(.subheadline.weight(.semibold)).fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(presentation.color.opacity(0.07), in: RoundedRectangle(cornerRadius: 12))
     }
 
     private func operationDetails(_ operation: PlannedOperation) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("OPERATION DETAILS").font(.caption.weight(.bold)).tracking(1).foregroundStyle(.secondary)
             labelledValue("Reason", operation.reason)
-            labelledValue("Source path", operation.sourceDocument?.url.path(percentEncoded: false) ?? "Not specified")
             labelledValue("Archive destination", operation.destination?.path(percentEncoded: false) ?? "Not defined", color: operation.destination == nil ? .orange : .primary)
         }
         .padding(16).background(Color.secondary.opacity(0.05), in: RoundedRectangle(cornerRadius: 12))
@@ -160,8 +172,7 @@ struct ExecutionOperationDetailView: View {
             evidenceRow("Duplicate contents verified", operation: operation, issueTerms: ["hash", "analysed document"])
             WorkflowValidationRow(label: "Destination defined", value: operation.destination == nil ? "Unresolved" : "Defined", color: operation.destination == nil ? .orange : .green, icon: operation.destination == nil ? "exclamationmark.circle.fill" : "checkmark.circle.fill")
             Divider()
-            WorkflowValidationRow(label: "Plan valid", value: operation.validationStatus.rawValue, color: validationColor(operation.validationStatus), icon: operation.validationStatus == .valid ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
-            WorkflowValidationRow(label: "Execution ready", value: planIsReady ? "Yes" : "No", color: planIsReady ? .green : .orange, icon: planIsReady ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
+            WorkflowValidationRow(label: "Operation validation", value: operation.validationStatus.rawValue, color: validationColor(operation.validationStatus), icon: operation.validationStatus == .valid ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
             ForEach(operation.validationIssues, id: \.self) { issue in
                 Label(issue, systemImage: "exclamationmark.triangle.fill").font(.caption).foregroundStyle(.red).fixedSize(horizontal: false, vertical: true)
             }
@@ -187,10 +198,28 @@ struct ExecutionOperationDetailView: View {
     private func validationSurface(_ operation: PlannedOperation) -> Color {
         operation.validationStatus == .invalid ? .red.opacity(0.07) : (planIsReady ? .green.opacity(0.07) : .orange.opacity(0.07))
     }
-    private func executionBlocker(_ operation: PlannedOperation) -> String {
-        if operation.validationStatus == .invalid { return "Execution is unavailable because this operation failed validation." }
-        if operation.destination == nil { return "Execution is unavailable because the archive destination is not defined." }
-        return "Execution is unavailable until every planned operation is ready."
+    private func statusBadge(_ operation: PlannedOperation) -> String {
+        switch operation.validationStatus {
+        case .pending: "Validating"
+        case .invalid: "Invalid"
+        case .valid: planIsReady ? "Ready" : "Blocked"
+        }
     }
-    private func blockerColor(_ operation: PlannedOperation) -> Color { operation.validationStatus == .invalid ? .red : .orange }
+    private func statusColor(_ operation: PlannedOperation) -> Color {
+        operation.validationStatus == .invalid ? .red : (planIsReady ? .green : .orange)
+    }
+    private func statusPresentation(_ operation: PlannedOperation) -> (title: String, message: String, guidance: String?, color: Color, icon: String) {
+        switch operation.validationStatus {
+        case .pending:
+            return ("Validation is not complete.", "The selected operation has not finished validation.", "Refresh validation.", .orange, "clock.fill")
+        case .invalid:
+            return ("Validation failed.", "The selected operation cannot be executed.", "Resolve the issues below before execution.", .red, "xmark.circle.fill")
+        case .valid where operation.destination == nil:
+            return ("Validation passed. Cannot execute yet.", "Archive destination has not been configured.", "Configure the archive destination before execution.", .orange, "exclamationmark.circle.fill")
+        case .valid where planIsReady:
+            return ("Validation passed.", "The overall Archive Plan is ready to execute.", nil, .green, "checkmark.circle.fill")
+        case .valid:
+            return ("Validation passed for this operation.", "The overall Archive Plan is blocked by another operation.", "Review the remaining planned archives.", .orange, "exclamationmark.circle.fill")
+        }
+    }
 }

@@ -1,4 +1,4 @@
-// 2026-07-20 14:22 SGT
+// 2026-07-21 11:28 SGT
 
 import Foundation
 import Observation
@@ -53,18 +53,32 @@ final class Inventory {
         executionPlanDecisionRevision += 1
     }
 
-    func resetRecommendationReview() {
+    @discardableResult
+    func resetRecommendation(id: String, to baseline: DuplicateRecommendation) -> Bool {
+        guard let index = recommendations.firstIndex(where: { $0.id == id }),
+              baseline.id == id,
+              recommendations[index].duplicateGroupIdentifier == baseline.duplicateGroupIdentifier,
+              recommendations[index].isDeterministic == baseline.isDeterministic else { return false }
+        restoreRecommendation(at: index, from: baseline)
+        invalidateExecutionPlan()
+        return true
+    }
+
+    @discardableResult
+    func resetRecommendationReview(to baselines: [DuplicateRecommendation]) -> Bool {
+        guard baselines.count == recommendations.count else { return false }
+        let baselinesByID = Dictionary(uniqueKeysWithValues: baselines.map { ($0.id, $0) })
+        guard baselinesByID.count == recommendations.count,
+              recommendations.allSatisfy({ recommendation in
+                  guard let baseline = baselinesByID[recommendation.id] else { return false }
+                  return recommendation.duplicateGroupIdentifier == baseline.duplicateGroupIdentifier
+                      && recommendation.isDeterministic == baseline.isDeterministic
+              }) else { return false }
         for index in recommendations.indices {
-            recommendations[index].definitiveDocumentID = nil
-            recommendations[index].redundantDocumentIDs = []
-            recommendations[index].status = .needsSelection
-            recommendations[index].rationale = "Select one definitive copy before approving archival."
-            recommendations[index].isManuallySelected = false
-            recommendations[index].decision = .pending
+            restoreRecommendation(at: index, from: baselinesByID[recommendations[index].id]!)
         }
-        executionPlan = nil
-        executionPlanDecisionRevision += 1
-        activeExecutionPlanGeneration = nil
+        invalidateExecutionPlan()
+        return true
     }
 
     @discardableResult
@@ -73,6 +87,28 @@ final class Inventory {
               decision != .approved || recommendations[index].isReadyForApproval,
               recommendations[index].decision != decision else { return false }
         recommendations[index].decision = decision
+        executionPlanDecisionRevision += 1
+        return true
+    }
+
+    @discardableResult
+    func approveRecommendation(id: String, documentID: UUID, groupDocumentIDs: [UUID]) -> Bool {
+        guard let index = recommendations.firstIndex(where: { $0.id == id }),
+              groupDocumentIDs.contains(documentID) else { return false }
+        let redundantIDs = groupDocumentIDs
+            .filter { $0 != documentID }
+            .sorted { $0.uuidString < $1.uuidString }
+        guard !redundantIDs.isEmpty else { return false }
+
+        let selectionChanged = recommendations[index].definitiveDocumentID != documentID
+        recommendations[index].definitiveDocumentID = documentID
+        recommendations[index].redundantDocumentIDs = redundantIDs
+        recommendations[index].status = .readyForApproval
+        if selectionChanged {
+            recommendations[index].rationale = "Every file has the same content hash. The definitive copy was selected manually; every other byte-identical group member is a redundant archive candidate."
+            recommendations[index].isManuallySelected = true
+        }
+        recommendations[index].decision = .approved
         executionPlanDecisionRevision += 1
         return true
     }
@@ -121,6 +157,21 @@ final class Inventory {
         self.scanSessionID = scanSessionID
         clear()
         recommendations.removeAll()
+        executionPlan = nil
+        executionPlanDecisionRevision += 1
+        activeExecutionPlanGeneration = nil
+    }
+
+    private func restoreRecommendation(at index: Int, from baseline: DuplicateRecommendation) {
+        recommendations[index].definitiveDocumentID = baseline.definitiveDocumentID
+        recommendations[index].redundantDocumentIDs = baseline.redundantDocumentIDs
+        recommendations[index].status = baseline.status
+        recommendations[index].rationale = baseline.rationale
+        recommendations[index].isManuallySelected = baseline.isManuallySelected
+        recommendations[index].decision = .pending
+    }
+
+    private func invalidateExecutionPlan() {
         executionPlan = nil
         executionPlanDecisionRevision += 1
         activeExecutionPlanGeneration = nil

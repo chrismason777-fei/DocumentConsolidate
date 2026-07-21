@@ -1,4 +1,4 @@
-// 2026-07-21 11:02 SGT
+// 2026-07-21 11:28 SGT
 //
 //  ContentView.swift
 //  DocumentConsolidate
@@ -43,7 +43,10 @@ struct ContentView: View {
         case .prepareScan:
             PrepareScanStageView()
         case .recommendations:
-            RecommendationReviewView(selectedRecommendationID: $selectedRecommendationID)
+            RecommendationReviewView(
+                selectedRecommendationID: $selectedRecommendationID,
+                reviewArchivePlan: { selectedStage = .executionPlan }
+            )
         case .executionPlan:
             ExecutionPlanReviewView(selectedOperationID: $selectedOperationID)
         }
@@ -55,8 +58,7 @@ struct ContentView: View {
             PrepareScanStatusView(onScanComplete: { selectedStage = .recommendations })
         case .recommendations:
             RecommendationDetailView(
-                recommendation: scanManager.recommendations.first { $0.id == selectedRecommendationID },
-                reviewArchivePlan: { selectedStage = .executionPlan }
+                recommendation: scanManager.recommendations.first { $0.id == selectedRecommendationID }
             )
         case .executionPlan:
             ExecutionOperationDetailView(

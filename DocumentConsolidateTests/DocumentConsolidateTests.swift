@@ -1,4 +1,4 @@
-// 2026-07-19 17:25 SGT
+// 2026-07-21 11:28 SGT
 //
 //  DocumentConsolidateTests.swift
 //  DocumentConsolidateTests
@@ -151,16 +151,161 @@ struct DocumentConsolidateTests {
         #expect(try Data(contentsOf: redundantURL) == bytes)
     }
 
-    private func duplicateGroup(hash: String, count: Int = 2, evidencedIndex: Int? = nil) -> DuplicateGroup {
+    @MainActor
+    @Test func resettingApprovedGroupPreservesOtherGroupAndPlan() async throws {
+        let firstGroup = duplicateGroup(hash: "reset-first")
+        let secondGroup = duplicateGroup(hash: "reset-second", idOffset: 10)
+        let manager = configuredManager(groups: [firstGroup, secondGroup])
+
+        await manager.approveArchival(id: firstGroup.identifier, definitiveDocumentID: firstGroup.documents[0].id)
+        await manager.approveArchival(id: secondGroup.identifier, definitiveDocumentID: secondGroup.documents[0].id)
+        let preserved = manager.recommendations.first { $0.id == secondGroup.identifier }!
+
+        try await manager.resetDecision(id: firstGroup.identifier)
+
+        let expected = RecommendationService().generate(from: [firstGroup]).recommendations[0]
+        #expect(manager.recommendations.first { $0.id == firstGroup.identifier } == expected)
+        #expect(manager.recommendations.first { $0.id == secondGroup.identifier } == preserved)
+        #expect(manager.executionPlan?.operations.allSatisfy { $0.recommendationID == secondGroup.identifier } == true)
+        #expect(manager.executionPlan?.operations.count == secondGroup.documents.count - 1)
+        #expect(manager.currentSession?.acceptedRecommendationCount == 1)
+    }
+
+    @MainActor
+    @Test func resettingRejectedAndPostponedGroupsIsIsolated() async throws {
+        let firstGroup = duplicateGroup(hash: "reset-rejected")
+        let secondGroup = duplicateGroup(hash: "reset-postponed", idOffset: 10)
+        let manager = configuredManager(groups: [firstGroup, secondGroup])
+        let firstBaseline = manager.recommendations.first { $0.id == firstGroup.identifier }!
+        let secondBaseline = manager.recommendations.first { $0.id == secondGroup.identifier }!
+
+        await manager.rejectRecommendation(id: firstGroup.identifier)
+        await manager.postponeRecommendation(id: secondGroup.identifier)
+        let postponed = manager.recommendations.first { $0.id == secondGroup.identifier }!
+        try await manager.resetDecision(id: firstGroup.identifier)
+        #expect(manager.recommendations.first { $0.id == firstGroup.identifier } == firstBaseline)
+        #expect(manager.recommendations.first { $0.id == secondGroup.identifier } == postponed)
+        #expect(manager.currentSession?.rejectedRecommendationCount == 0)
+
+        try await manager.resetDecision(id: secondGroup.identifier)
+        #expect(manager.recommendations.first { $0.id == secondGroup.identifier } == secondBaseline)
+    }
+
+    @MainActor
+    @Test func resetRestoresEvidenceBackedBaselineAfterManualOverride() async throws {
+        let group = duplicateGroup(hash: "reset-evidence", evidencedIndex: 0)
+        let manager = configuredManager(groups: [group])
+        let baseline = manager.recommendations[0]
+
+        await manager.approveArchival(id: group.identifier, definitiveDocumentID: group.documents[1].id)
+        try await manager.resetDecision(id: group.identifier)
+
+        #expect(manager.recommendations[0] == baseline)
+        #expect(manager.recommendations[0].definitiveDocumentID == group.documents[0].id)
+        #expect(manager.recommendations[0].redundantDocumentIDs == [group.documents[1].id])
+        #expect(manager.recommendations[0].status == .readyForApproval)
+        #expect(manager.recommendations[0].isDeterministic)
+        #expect(!manager.recommendations[0].isManuallySelected)
+        #expect(manager.recommendations[0].decision == .pending)
+    }
+
+    @MainActor
+    @Test func globalResetRestoresEveryGeneratedBaseline() async throws {
+        let manualGroup = duplicateGroup(hash: "reset-all-manual")
+        let evidenceGroup = duplicateGroup(hash: "reset-all-evidence", evidencedIndex: 0, idOffset: 10)
+        let groups = [manualGroup, evidenceGroup]
+        let manager = configuredManager(groups: groups)
+        let baselines = manager.recommendations
+
+        await manager.selectDefinitiveCopy(id: manualGroup.identifier, documentID: manualGroup.documents[0].id)
+        await manager.rejectRecommendation(id: manualGroup.identifier)
+        await manager.selectDefinitiveCopy(id: evidenceGroup.identifier, documentID: evidenceGroup.documents[1].id)
+        await manager.postponeRecommendation(id: evidenceGroup.identifier)
+        try await manager.resetAllDecisions()
+
+        #expect(manager.recommendations == baselines)
+        #expect(manager.currentSession?.acceptedRecommendationCount == 0)
+        #expect(manager.currentSession?.rejectedRecommendationCount == 0)
+    }
+
+    @MainActor
+    @Test func resetRejectsMissingGroupWithoutChangingRecommendationOrPlan() async {
+        let group = duplicateGroup(hash: "reset-failure")
+        let manager = configuredManager(groups: [group])
+        await manager.approveArchival(id: group.identifier, definitiveDocumentID: group.documents[0].id)
+        let recommendation = manager.recommendations[0]
+        let plan = manager.executionPlan
+        manager.inventory.replace(with: [group.documents[0]])
+
+        do {
+            try await manager.resetDecision(id: group.identifier)
+            Issue.record("Expected reset to fail")
+        } catch {
+            #expect(error is RecommendationResetError)
+        }
+
+        #expect(manager.recommendations[0] == recommendation)
+        #expect(manager.executionPlan == plan)
+    }
+
+    @MainActor
+    @Test func stalePlanCannotSurviveResetAndResetDoesNotModifyFiles() async throws {
+        let testDirectory = FileManager.default.temporaryDirectory
+            .appending(path: "DocumentConsolidate-Reset-\(UUID().uuidString)", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: testDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: testDirectory) }
+        let bytes = Data("unchanged reset fixture".utf8)
+        let firstURL = testDirectory.appending(path: "first.txt")
+        let secondURL = testDirectory.appending(path: "second.txt")
+        try bytes.write(to: firstURL)
+        try bytes.write(to: secondURL)
+        let group = DuplicateGroup(identifier: "reset-stale", documents: [
+            record(id: "EEEEEEEE-EEEE-EEEE-EEEE-EEEEEEEEEEE1", name: "first.txt", hash: "reset-stale", url: firstURL),
+            record(id: "EEEEEEEE-EEEE-EEEE-EEEE-EEEEEEEEEEE2", name: "second.txt", hash: "reset-stale", url: secondURL)
+        ])
+        let manager = configuredManager(groups: [group])
+        await manager.approveArchival(id: group.identifier, definitiveDocumentID: group.documents[0].id)
+        let stalePlan = manager.executionPlan!
+        let staleGeneration = manager.inventory.beginExecutionPlanGeneration()
+
+        try await manager.resetDecision(id: group.identifier)
+        manager.inventory.finishExecutionPlanGeneration(
+            with: stalePlan,
+            generation: staleGeneration.generation,
+            decisionRevision: staleGeneration.decisionRevision
+        )
+
+        #expect(manager.executionPlan?.operations.isEmpty == true)
+        #expect(try Data(contentsOf: firstURL) == bytes)
+        #expect(try Data(contentsOf: secondURL) == bytes)
+    }
+
+    private func duplicateGroup(
+        hash: String,
+        count: Int = 2,
+        evidencedIndex: Int? = nil,
+        idOffset: Int = 0
+    ) -> DuplicateGroup {
         let documents = (0..<count).map { index in
             record(
-                id: String(format: "DDDDDDDD-DDDD-DDDD-DDDD-DDDDDDDDDD%02d", index),
+                id: String(format: "DDDDDDDD-DDDD-DDDD-DDDD-DDDDDDDDDD%02d", index + idOffset),
                 name: "duplicate-\(index).txt",
                 hash: hash,
                 hasEvidence: evidencedIndex == index
             )
         }
         return DuplicateGroup(identifier: hash, documents: documents)
+    }
+
+    @MainActor
+    private func configuredManager(groups: [DuplicateGroup]) -> ScanManager {
+        let inventory = Inventory()
+        let manager = ScanManager(inventory: inventory)
+        _ = manager.createSession()
+        inventory.replace(with: groups.flatMap(\.documents))
+        inventory.replaceRecommendations(with: RecommendationService().generate(from: groups).recommendations)
+        manager.refreshRecommendationSummary()
+        return manager
     }
 
     private func record(
