@@ -1,4 +1,4 @@
-// 2026-07-21 11:28 SGT
+// 2026-07-21 16:46 SGT
 
 import Foundation
 import Observation
@@ -9,12 +9,14 @@ final class Inventory {
     private(set) var scanSessionID: UUID?
     private(set) var documents: [DocumentRecord] = []
     private(set) var recommendations: [DuplicateRecommendation] = []
-    private(set) var executionPlan: ExecutionPlan?
+    private(set) var archivePlanningState: ArchivePlanningState?
     private(set) var executionPlanDecisionRevision = 0
     private(set) var activeExecutionPlanGeneration: Int?
     private var executionPlanGenerationSequence = 0
 
     var isGeneratingExecutionPlan: Bool { activeExecutionPlanGeneration != nil }
+    var executionPlan: ExecutionPlan? { archivePlanningState?.plan }
+    var archiveDestination: ArchiveDestination? { archivePlanningState?.destination }
 
     @discardableResult
     func add(_ document: DocumentRecord) -> Bool {
@@ -49,7 +51,7 @@ final class Inventory {
 
     func replaceRecommendations(with recommendations: [DuplicateRecommendation]) {
         self.recommendations = recommendations
-        executionPlan = nil
+        archivePlanningState = nil
         executionPlanDecisionRevision += 1
     }
 
@@ -133,7 +135,18 @@ final class Inventory {
     }
 
     func replaceExecutionPlan(with executionPlan: ExecutionPlan?) {
-        self.executionPlan = executionPlan
+        guard let executionPlan else {
+            archivePlanningState = nil
+            return
+        }
+        archivePlanningState = ArchivePlanningState(
+            plan: executionPlan,
+            destination: archivePlanningState?.destination
+        )
+    }
+
+    func replaceArchivePlanningState(with state: ArchivePlanningState?) {
+        archivePlanningState = state
     }
 
     func beginExecutionPlanGeneration() -> (generation: Int, decisionRevision: Int) {
@@ -149,7 +162,10 @@ final class Inventory {
     ) {
         guard activeExecutionPlanGeneration == generation,
               executionPlanDecisionRevision == decisionRevision else { return }
-        self.executionPlan = executionPlan
+        archivePlanningState = ArchivePlanningState(
+            plan: executionPlan,
+            destination: archivePlanningState?.destination
+        )
         activeExecutionPlanGeneration = nil
     }
 
@@ -157,7 +173,7 @@ final class Inventory {
         self.scanSessionID = scanSessionID
         clear()
         recommendations.removeAll()
-        executionPlan = nil
+        archivePlanningState = nil
         executionPlanDecisionRevision += 1
         activeExecutionPlanGeneration = nil
     }
@@ -172,7 +188,7 @@ final class Inventory {
     }
 
     private func invalidateExecutionPlan() {
-        executionPlan = nil
+        archivePlanningState = nil
         executionPlanDecisionRevision += 1
         activeExecutionPlanGeneration = nil
     }
