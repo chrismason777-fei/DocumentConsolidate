@@ -1,12 +1,9 @@
-// 2026-07-20 13:24 SGT
+// 2026-07-21 10:37 SGT
 
 import SwiftUI
 
 enum WorkflowStage: String, CaseIterable, Identifiable {
-    case scanRoots = "Scan Folders"
-    case scan = "Scan"
-    case inventory = "Inventory"
-    case duplicates = "Duplicates"
+    case prepareScan = "Prepare Scan"
     case recommendations = "Duplicate Archival"
     case executionPlan = "Archive Plan"
 
@@ -14,10 +11,7 @@ enum WorkflowStage: String, CaseIterable, Identifiable {
 
     var icon: String {
         switch self {
-        case .scanRoots: "folder.badge.plus"
-        case .scan: "waveform.path.ecg"
-        case .inventory: "doc.text.magnifyingglass"
-        case .duplicates: "doc.on.doc"
+        case .prepareScan: "doc.text.magnifyingglass"
         case .recommendations: "checklist"
         case .executionPlan: "list.bullet.rectangle"
         }

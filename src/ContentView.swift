@@ -1,4 +1,4 @@
-// 2026-07-20 19:53 SGT
+// 2026-07-21 11:02 SGT
 //
 //  ContentView.swift
 //  DocumentConsolidate
@@ -10,9 +10,7 @@ import SwiftUI
 
 struct ContentView: View {
     @Environment(ScanManager.self) private var scanManager
-    @State private var selectedStage: WorkflowStage? = .scanRoots
-    @State private var selectedDocumentID: UUID?
-    @State private var selectedDuplicateGroupID: String?
+    @State private var selectedStage: WorkflowStage? = .prepareScan
     @State private var selectedRecommendationID: String?
     @State private var selectedOperationID: String?
 
@@ -41,15 +39,9 @@ struct ContentView: View {
     }
 
     @ViewBuilder private var contentView: some View {
-        switch selectedStage ?? .scanRoots {
-        case .scanRoots:
-            ScanRootsStageView()
-        case .scan:
-            ScanStageView()
-        case .inventory:
-            DocumentListView(documents: scanManager.documents, selectedDocumentID: $selectedDocumentID)
-        case .duplicates:
-            DuplicateGroupsView(groups: duplicateGroups, selectedGroupID: $selectedDuplicateGroupID)
+        switch selectedStage ?? .prepareScan {
+        case .prepareScan:
+            PrepareScanStageView()
         case .recommendations:
             RecommendationReviewView(selectedRecommendationID: $selectedRecommendationID)
         case .executionPlan:
@@ -58,21 +50,9 @@ struct ContentView: View {
     }
 
     @ViewBuilder private var detailView: some View {
-        switch selectedStage ?? .scanRoots {
-        case .scanRoots:
-            WorkflowPlaceholderDetail(
-                title: "Scan folders",
-                message: "Add or remove source folders in the content pane. Scanning never modifies these folders."
-            )
-        case .scan:
-            WorkflowPlaceholderDetail(
-                title: "Analysis pipeline",
-                message: "Scan progress appears here. Your files remain unchanged while Document Consolidate identifies byte-identical copies."
-            )
-        case .inventory:
-            DocumentDetailView(document: scanManager.documents.first { $0.id == selectedDocumentID })
-        case .duplicates:
-            DuplicateGroupDetailView(group: duplicateGroups.first { $0.id == selectedDuplicateGroupID })
+        switch selectedStage ?? .prepareScan {
+        case .prepareScan:
+            PrepareScanStatusView(onScanComplete: { selectedStage = .recommendations })
         case .recommendations:
             RecommendationDetailView(
                 recommendation: scanManager.recommendations.first { $0.id == selectedRecommendationID },
@@ -86,25 +66,21 @@ struct ContentView: View {
         }
     }
 
-    private var duplicateGroups: [DuplicateGroupSummary] {
-        DuplicateGroupsView.groups(from: scanManager.documents)
-    }
-
     private func status(for stage: WorkflowStage) -> String {
         switch stage {
-        case .scanRoots:
-            "\(scanManager.selectedRootFolders.count) roots"
-        case .scan:
-            scanManager.isScanning ? "Running" : (scanManager.currentSession == nil ? "Not started" : "Complete")
-        case .inventory:
-            "\(scanManager.documents.count) documents"
-        case .duplicates:
-            "\(duplicateGroups.count) groups"
+        case .prepareScan:
+            prepareScanStatus
         case .recommendations:
             recommendationStatus
         case .executionPlan:
             executionPlanStatus
         }
+    }
+
+    private var prepareScanStatus: String {
+        if scanManager.isScanning { return "Running" }
+        if scanManager.currentSession != nil { return "Complete" }
+        return "\(scanManager.selectedRootFolders.count) roots"
     }
 
     private var executionPlanStatus: String {

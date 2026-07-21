@@ -1,4 +1,4 @@
-// 2026-07-19 13:10 SGT
+// 2026-07-21 11:02 SGT
 
 import SwiftUI
 
@@ -6,28 +6,27 @@ struct ScanSummaryView: View {
     let session: ScanSession
 
     private let columns = [
-        GridItem(.adaptive(minimum: 120), spacing: 12, alignment: .topLeading)
+        GridItem(.adaptive(minimum: 110), spacing: 12, alignment: .topLeading)
     ]
 
     var body: some View {
-        GroupBox("Scan summary") {
-            VStack(alignment: .leading, spacing: 8) {
-                LazyVGrid(columns: columns, alignment: .leading, spacing: 8) {
-                    SummaryMetric("Created") {
-                        Text(session.createdAt, format: .dateTime.month().day().hour().minute())
-                    }
-                    SummaryMetric("Scanned roots", value: session.sourceFolders.count.formatted())
-                    SummaryMetric("Unique documents", value: session.uniqueDocumentCount.formatted())
-                    SummaryMetric("Duplicate documents", value: session.duplicateDocumentCount.formatted())
-                    SummaryMetric("Duplicate groups", value: session.duplicateGroupCount.formatted())
-                    SummaryMetric("Duplicate analysis", value: session.duplicateAnalysisStatus.rawValue)
+        VStack(alignment: .leading, spacing: 12) {
+            LazyVGrid(columns: columns, alignment: .leading, spacing: 12) {
+                SummaryMetric("Created") {
+                    Text(session.createdAt, format: .dateTime.month().day().hour().minute())
                 }
-
-                Text("Session \(session.id.uuidString)")
-                    .font(.caption.monospaced())
-                    .foregroundStyle(.secondary)
-                    .textSelection(.enabled)
+                SummaryMetric("Scanned roots", value: session.sourceFolders.count.formatted())
+                SummaryMetric("Unique documents", value: session.uniqueDocumentCount.formatted())
+                SummaryMetric("Duplicate documents", value: session.duplicateDocumentCount.formatted())
+                SummaryMetric("Duplicate groups", value: session.duplicateGroupCount.formatted())
+                SummaryMetric("Duplicate analysis", value: session.duplicateAnalysisStatus.rawValue)
             }
+
+            Divider()
+            Text("Session \(session.id.uuidString)")
+                .font(.caption.monospaced())
+                .foregroundStyle(.secondary)
+                .textSelection(.enabled)
         }
     }
 }
@@ -57,4 +56,3 @@ private struct SummaryMetric<Content: View>: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
-

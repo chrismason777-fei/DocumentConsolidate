@@ -1,4 +1,4 @@
-// 2026-07-20 19:53 SGT
+// 2026-07-21 10:29 SGT
 
 import SwiftUI
 
@@ -9,7 +9,7 @@ struct ExecutionPlanReviewView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             WorkflowStageBanner(
-                stage: "STAGE 6 OF 6",
+                stage: "STAGE 5 OF 5",
                 title: "Archive Plan",
                 subtitle: "Review what stays, what would be archived, and what prevents safe execution."
             )

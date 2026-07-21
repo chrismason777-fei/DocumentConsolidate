@@ -1,4 +1,4 @@
-// 2026-07-21 10:05 SGT
+// 2026-07-21 10:29 SGT
 
 import AppKit
 import QuickLook
@@ -11,7 +11,7 @@ struct RecommendationReviewView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             WorkflowStageBanner(
-                stage: "STAGE 5 OF 6",
+                stage: "STAGE 4 OF 5",
                 title: "Duplicate Archival",
                 subtitle: "Choose the copy to keep, then approve redundant copies for the Archive Plan."
             )

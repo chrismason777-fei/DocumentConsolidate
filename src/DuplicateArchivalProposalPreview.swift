@@ -1,4 +1,4 @@
-// 2026-07-20 19:39 SGT
+// 2026-07-21 10:29 SGT
 
 import SwiftUI
 
@@ -8,7 +8,7 @@ struct ProposalReviewList: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             ProposalStageHeader(
-                eyebrow: "STAGE 5 OF 6",
+                eyebrow: "STAGE 4 OF 5",
                 title: "Duplicate Archival",
                 subtitle: "Choose the copy to keep, then approve redundant copies for archival."
             )

@@ -1,16 +1,23 @@
-// 2026-07-19 16:55 SGT
+// 2026-07-21 11:02 SGT
 
 import SwiftUI
 import UniformTypeIdentifiers
 
-struct ScanRootsStageView: View {
+struct PrepareScanStageView: View {
     @Environment(ScanManager.self) private var scanManager
     @State private var isFolderPickerPresented = false
     @State private var pickerError: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            StageHeading("Scan folders", subtitle: "Choose the folders that feed the workflow.")
+            StageHeading("Prepare Scan", subtitle: "Choose the folders to include in the scan.")
+            Text(scanManager.selectedRootFolders.count, format: .number)
+                .font(.title3.weight(.semibold))
+                .contentTransition(.numericText())
+                .accessibilityLabel("\(scanManager.selectedRootFolders.count) configured folders")
+            Text(scanManager.selectedRootFolders.count == 1 ? "configured folder" : "configured folders")
+                .font(.caption)
+                .foregroundStyle(.secondary)
             ViewThatFits(in: .horizontal) {
                 HStack {
                     addFolderButton
@@ -37,7 +44,7 @@ struct ScanRootsStageView: View {
             if let pickerError { Text(pickerError).foregroundStyle(.red) }
         }
         .padding()
-        .navigationTitle("Scan Folders")
+        .navigationTitle("Prepare Scan")
         .fileImporter(isPresented: $isFolderPickerPresented, allowedContentTypes: [.folder]) { result in
             do {
                 scanManager.addRootFolder(try result.get())
@@ -50,7 +57,7 @@ struct ScanRootsStageView: View {
 
     private var addFolderButton: some View {
         Button("Add Root Folder", systemImage: "plus") { isFolderPickerPresented = true }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.bordered)
     }
 
     private var clearFoldersButton: some View {
@@ -59,34 +66,66 @@ struct ScanRootsStageView: View {
     }
 }
 
-struct ScanStageView: View {
+struct PrepareScanStatusView: View {
     @Environment(ScanManager.self) private var scanManager
     @State private var scanError: String?
 
+    let onScanComplete: () -> Void
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            StageHeading("Scan", subtitle: "Run and monitor the analysis pipeline.")
-            if let session = scanManager.currentSession {
-                ScanSummaryView(session: session)
-            } else {
-                ContentUnavailableView("No scan session", systemImage: "doc.text.magnifyingglass")
-            }
-            progress
-            if let scanError { Text(scanError).foregroundStyle(.red) }
-            ViewThatFits(in: .horizontal) {
-                HStack {
-                    scanButton
-                    secondaryScanButtons
-                }
-                VStack(alignment: .leading) {
-                    scanButton.frame(maxWidth: .infinity)
-                    secondaryScanButtons
-                }
-            }
-            Spacer()
+        DetailShell(title: title) {
+            statusContent
         }
-        .padding()
-        .navigationTitle("Scan")
+    }
+
+    private var title: String {
+        if scanManager.isScanning { return "Scanning" }
+        if scanError != nil { return "Scan Failed" }
+        if scanManager.currentSession != nil { return "Previous Scan" }
+        return "Prepare to Scan"
+    }
+
+    @ViewBuilder private var statusContent: some View {
+        if scanManager.isScanning {
+            Text("Document Consolidate is analysing the configured folders.")
+                .foregroundStyle(.secondary)
+            progress
+            actionLayout(showStop: true, showReset: false)
+        } else if let scanError {
+            Label(scanError, systemImage: "exclamationmark.triangle.fill")
+                .foregroundStyle(.red)
+            actionLayout(showStop: false, showReset: scanManager.currentSession != nil)
+        } else if let session = scanManager.currentSession {
+            Text("The most recently completed scan is shown below.")
+                .foregroundStyle(.secondary)
+            ScanSummaryView(session: session)
+            actionLayout(showStop: false, showReset: true)
+        } else if scanManager.selectedRootFolders.isEmpty {
+            Text("Add at least one folder in the centre pane to begin.")
+                .foregroundStyle(.secondary)
+            scanButton
+        } else {
+            LabeledContent("Configured folders", value: scanManager.selectedRootFolders.count.formatted())
+                .font(.headline)
+            Label("Scanning analyses files without modifying them.", systemImage: "checkmark.shield")
+                .foregroundStyle(.secondary)
+            scanButton
+        }
+    }
+
+    private func actionLayout(showStop: Bool, showReset: Bool) -> some View {
+        ViewThatFits(in: .horizontal) {
+            HStack {
+                scanButton
+                if showStop { stopButton }
+                if showReset { resetButton }
+            }
+            VStack(alignment: .leading) {
+                scanButton.frame(maxWidth: .infinity)
+                if showStop { stopButton }
+                if showReset { resetButton }
+            }
+        }
     }
 
     @ViewBuilder private var progress: some View {
@@ -123,13 +162,6 @@ struct ScanStageView: View {
             .disabled(scanManager.selectedRootFolders.isEmpty || scanManager.isScanning)
     }
 
-    private var secondaryScanButtons: some View {
-        HStack {
-            stopButton
-            resetButton
-        }
-    }
-
     private var stopButton: some View {
         Button("Stop Scan") { scanManager.stopScan() }
             .disabled(!scanManager.isScanning)
@@ -144,6 +176,7 @@ struct ScanStageView: View {
         do {
             try await scanManager.scan()
             scanError = nil
+            onScanComplete()
         } catch {
             scanError = error.localizedDescription
         }

@@ -1,4 +1,4 @@
-// 2026-07-20 19:47 SGT
+// 2026-07-21 10:29 SGT
 
 import SwiftUI
 
@@ -45,12 +45,11 @@ struct ProposalSidebar: View {
                 ProposalStageRow(number: 1, title: "Scan Folders", status: "1 root", isComplete: true)
                 ProposalStageRow(number: 2, title: "Scan", status: "Complete", isComplete: true)
                 ProposalStageRow(number: 3, title: "Inventory", status: "6 files", isComplete: true)
-                ProposalStageRow(number: 4, title: "Duplicates", status: "2 groups", isComplete: true)
                 NavigationLink(value: ProposalStage.duplicateArchival) {
-                    ProposalStageRow(number: 5, title: "Duplicate Archival", status: "1 approved · 2 to review", isComplete: false)
+                    ProposalStageRow(number: 4, title: "Duplicate Archival", status: "1 approved · 2 to review", isComplete: false)
                 }
                 NavigationLink(value: ProposalStage.archivePlan) {
-                    ProposalStageRow(number: 6, title: "Archive Plan", status: "Not execution-ready", isComplete: false, needsAttention: true)
+                    ProposalStageRow(number: 5, title: "Archive Plan", status: "Not execution-ready", isComplete: false, needsAttention: true)
                 }
             }
         }
