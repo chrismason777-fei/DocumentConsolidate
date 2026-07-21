@@ -1,4 +1,4 @@
-// 2026-07-20 19:53 SGT
+// 2026-07-21 10:05 SGT
 
 import SwiftUI
 
@@ -64,10 +64,22 @@ struct WorkflowOutcomeCard: View {
                 Image(systemName: outcome == "KEEP" ? "doc.badge.checkmark.fill" : "archivebox.fill")
                     .font(.title3).foregroundStyle(color).frame(width: 25)
                 VStack(alignment: .leading, spacing: 4) {
+                    metadataLabel("Filename")
                     Text(document.filename).font(.body.weight(.semibold))
-                    Text(document.url.path(percentEncoded: false))
+                    metadataLabel("Modified")
+                    Text(document.modifiedAt?.formatted(date: .long, time: .shortened) ?? "Unavailable")
+                        .font(.subheadline.weight(.medium))
+                    metadataLabel("Location")
+                    Text(document.url.deletingLastPathComponent().path(percentEncoded: false))
+                        .font(.caption).foregroundStyle(.secondary).lineLimit(2).truncationMode(.middle).textSelection(.enabled)
+                    if let createdAt = document.createdAt {
+                        metadataLabel("Created")
+                        Text(createdAt, format: .dateTime.day().month(.wide).year().hour().minute())
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                    metadataLabel("Size")
+                    Text(document.fileSize, format: .byteCount(style: .file))
                         .font(.caption).foregroundStyle(.secondary)
-                        .lineLimit(2).truncationMode(.middle).textSelection(.enabled)
                 }
                 Spacer()
                 Text(outcome).font(.caption2.weight(.bold)).tracking(0.8).foregroundStyle(color)
@@ -79,6 +91,13 @@ struct WorkflowOutcomeCard: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("\(outcome), \(document.filename), \(document.url.path(percentEncoded: false))")
+    }
+
+    private func metadataLabel(_ label: String) -> some View {
+        Text(label.uppercased())
+            .font(.caption2.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .padding(.top, 3)
     }
 }
 

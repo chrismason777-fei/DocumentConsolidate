@@ -1,5 +1,7 @@
-// 2026-07-20 19:53 SGT
+// 2026-07-21 10:05 SGT
 
+import AppKit
+import QuickLook
 import SwiftUI
 
 struct RecommendationReviewView: View {
@@ -100,6 +102,7 @@ struct RecommendationDetailView: View {
     let recommendation: DuplicateRecommendation?
     let reviewArchivePlan: () -> Void
     @State private var selectedDefinitiveID: UUID?
+    @State private var quickLookURL: URL?
 
     var body: some View {
         ScrollView {
@@ -112,14 +115,26 @@ struct RecommendationDetailView: View {
                     Text("The KEEP copy remains in its current location. Every other copy is proposed for ARCHIVE.")
                         .foregroundStyle(.secondary)
                     ForEach(groupDocuments(for: proposal)) { document in
-                        WorkflowOutcomeCard(
-                            outcome: selectedDefinitiveID == document.id ? "KEEP" : "ARCHIVE",
-                            document: document,
-                            color: selectedDefinitiveID == document.id ? .indigo : .orange,
-                            isSelected: selectedDefinitiveID == document.id,
-                            action: canChoose(proposal) ? { selectedDefinitiveID = document.id } : nil
-                        )
+                        VStack(alignment: .leading, spacing: 8) {
+                            WorkflowOutcomeCard(
+                                outcome: selectedDefinitiveID == document.id ? "KEEP" : "ARCHIVE",
+                                document: document,
+                                color: selectedDefinitiveID == document.id ? .indigo : .orange,
+                                isSelected: selectedDefinitiveID == document.id,
+                                action: canChoose(proposal) ? { selectedDefinitiveID = document.id } : nil
+                            )
+                            HStack {
+                                Button("Quick Look", systemImage: "eye") { quickLookURL = document.url }
+                                Button("Reveal in Finder", systemImage: "folder") {
+                                    NSWorkspace.shared.activateFileViewerSelecting([document.url])
+                                }
+                            }
+                            .buttonStyle(.borderless)
+                            .padding(.leading, 14)
+                        }
                     }
+                    Text("Recommendation: \(proposal.rationale)")
+                        .font(.caption).foregroundStyle(.secondary)
                     confirmation(proposal)
                     consequence(proposal)
                     Divider()
@@ -136,6 +151,7 @@ struct RecommendationDetailView: View {
         .onAppear { selectedDefinitiveID = recommendation?.definitiveDocumentID }
         .onChange(of: recommendation?.id) { _, _ in selectedDefinitiveID = recommendation?.definitiveDocumentID }
         .onChange(of: recommendation?.definitiveDocumentID) { _, value in selectedDefinitiveID = value }
+        .quickLookPreview($quickLookURL)
     }
 
     private func detailHeader(_ proposal: DuplicateRecommendation) -> some View {
