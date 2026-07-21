@@ -1,4 +1,4 @@
-// 2026-07-21 17:46 SGT
+// 2026-07-21 18:03 SGT
 
 import Foundation
 
@@ -12,14 +12,25 @@ enum ArchivePlanningLifecycleError: Error, Equatable, Sendable {
 extension ScanManager {
     @discardableResult
     func generateExecutionPlan() async -> Result<ArchivePlanningState, ArchivePlanningLifecycleError> {
+        await generateExecutionPlan(for: inventory.archiveDestination)
+    }
+
+    @discardableResult
+    func clearArchiveDestination() async -> Result<ArchivePlanningState, ArchivePlanningLifecycleError> {
+        await generateExecutionPlan(for: nil)
+    }
+
+    @discardableResult
+    func generateExecutionPlan(
+        for proposedDestination: ArchiveDestination?
+    ) async -> Result<ArchivePlanningState, ArchivePlanningLifecycleError> {
         guard let session = currentSession else { return .failure(.noScanSession) }
         let generation = inventory.beginExecutionPlanGeneration()
-        let destination = inventory.archiveDestination
         let plan = ExecutionPlanService().generate(
             recommendations: recommendations,
             documents: documents,
             scanRoots: selectedRootFolders,
-            archiveDestination: destination,
+            archiveDestination: proposedDestination,
             scanSessionID: session.id,
             decisionRevision: generation.decisionRevision,
             createdAt: Date()
@@ -38,7 +49,7 @@ extension ScanManager {
             inventory.cancelExecutionPlanGeneration(generation.generation)
             return .failure(.cancelled)
         }
-        let candidate = ArchivePlanningState(plan: validatedPlan, destination: destination)
+        let candidate = ArchivePlanningState(plan: validatedPlan, destination: proposedDestination)
         switch inventory.acceptArchivePlanningState(
             candidate,
             generation: generation.generation,
