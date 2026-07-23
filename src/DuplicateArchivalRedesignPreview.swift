@@ -1,4 +1,4 @@
-// 2026-07-21 10:29 SGT
+// 2026-07-23 19:53 SGT
 
 import SwiftUI
 
@@ -109,7 +109,7 @@ struct ProposalStageHeader: View {
         VStack(alignment: .leading, spacing: 7) {
             Text(eyebrow).font(.caption2.weight(.bold)).tracking(1.2).foregroundStyle(.indigo)
             Text(title).font(.largeTitle.weight(.bold))
-            Text(subtitle).font(.body).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            Text(subtitle).font(.body).foregroundStyle(.secondary)
         }
         .padding(20)
     }

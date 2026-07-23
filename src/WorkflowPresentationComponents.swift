@@ -1,4 +1,4 @@
-// 2026-07-21 11:16 SGT
+// 2026-07-23 19:53 SGT
 
 import SwiftUI
 
@@ -9,7 +9,7 @@ struct WorkflowStageBanner: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 7) {
             Text(title).font(.largeTitle.weight(.bold))
-            Text(subtitle).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            Text(subtitle).foregroundStyle(.secondary)
         }
     }
 }
