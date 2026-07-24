@@ -1,4 +1,4 @@
-// 2026-07-21 17:46 SGT
+// 2026-07-24 15:49 SGT
 
 import Foundation
 import Observation
@@ -18,6 +18,7 @@ final class Inventory {
     private(set) var archivePlanningState: ArchivePlanningState?
     private(set) var executionPlanDecisionRevision = 0
     private(set) var activeExecutionPlanGeneration: Int?
+    private(set) var isExecuting = false
     private var executionPlanGenerationSequence = 0
 
     var isGeneratingExecutionPlan: Bool { activeExecutionPlanGeneration != nil }
@@ -198,6 +199,19 @@ final class Inventory {
     func cancelExecutionPlanGeneration(_ generation: Int) {
         guard activeExecutionPlanGeneration == generation else { return }
         activeExecutionPlanGeneration = nil
+    }
+
+    func beginExecution() -> ArchivePlanningState? {
+        guard !isExecuting,
+              let archivePlanningState,
+              archivePlanningState.destination != nil,
+              archivePlanningState.plan.isReady else { return nil }
+        isExecuting = true
+        return archivePlanningState
+    }
+
+    func finishExecution() {
+        isExecuting = false
     }
 
     func reset(for scanSessionID: UUID?) {

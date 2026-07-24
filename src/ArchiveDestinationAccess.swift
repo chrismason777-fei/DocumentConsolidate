@@ -1,4 +1,4 @@
-// 2026-07-21 15:52 SGT
+// 2026-07-24 16:23 SGT
 
 import Foundation
 
@@ -7,6 +7,7 @@ enum ArchiveDestinationAccessError: Error, Equatable, Sendable {
     case doesNotExist
     case notDirectory
     case inaccessibleDirectory
+    case notWritable
     case equalsScanRoot
     case insideScanRoot
     case scopedAccessAcquisitionFailed
@@ -28,6 +29,25 @@ struct ArchiveDestinationAccess: ArchiveDestinationAccessProviding, Sendable {
         let stopAccess: @Sendable (URL) -> Void
         let createBookmark: @Sendable (URL) throws -> Data
         let resolveBookmark: @Sendable (Data) throws -> (url: URL, isStale: Bool)
+        let verifyWritable: @Sendable (URL) throws -> Void
+
+        init(
+            fileExists: @escaping @Sendable (URL) -> Bool,
+            isDirectory: @escaping @Sendable (URL) throws -> Bool,
+            startAccess: @escaping @Sendable (URL) -> Bool,
+            stopAccess: @escaping @Sendable (URL) -> Void,
+            createBookmark: @escaping @Sendable (URL) throws -> Data,
+            resolveBookmark: @escaping @Sendable (Data) throws -> (url: URL, isStale: Bool),
+            verifyWritable: @escaping @Sendable (URL) throws -> Void = { _ in }
+        ) {
+            self.fileExists = fileExists
+            self.isDirectory = isDirectory
+            self.startAccess = startAccess
+            self.stopAccess = stopAccess
+            self.createBookmark = createBookmark
+            self.resolveBookmark = resolveBookmark
+            self.verifyWritable = verifyWritable
+        }
 
         nonisolated static let live = Environment(
             fileExists: { FileManager.default.fileExists(atPath: $0.path) },
@@ -50,6 +70,15 @@ struct ArchiveDestinationAccess: ArchiveDestinationAccessProviding, Sendable {
                     bookmarkDataIsStale: &isStale
                 )
                 return (url, isStale)
+            },
+            verifyWritable: { root in
+                let probe = root.appending(
+                    path: ".document-consolidate-write-probe-\(UUID().uuidString)",
+                    directoryHint: .isDirectory
+                )
+                defer { try? FileManager.default.removeItem(at: probe) }
+                try FileManager.default.createDirectory(at: probe, withIntermediateDirectories: false)
+                try FileManager.default.removeItem(at: probe)
             }
         )
     }
@@ -82,6 +111,7 @@ struct ArchiveDestinationAccess: ArchiveDestinationAccessProviding, Sendable {
                 throw ArchiveDestinationAccessError.insideScanRoot
             }
         }
+        try verifyWritable(canonicalURL)
 
         let bookmarkData: Data?
         do {
@@ -128,6 +158,65 @@ struct ArchiveDestinationAccess: ArchiveDestinationAccessProviding, Sendable {
         } catch {
             throw ArchiveDestinationAccessError.inaccessibleDirectory
         }
+        try verifyWritable(canonicalURL)
         return try operation(canonicalURL)
+    }
+
+    nonisolated func withAccess<T: Sendable>(
+        to destination: ArchiveDestination,
+        operation: (URL) async throws -> T
+    ) async throws -> T {
+        let accessURL = try resolvedAccessURL(for: destination)
+        let accessed = environment.startAccess(accessURL)
+        guard accessed else { throw ArchiveDestinationAccessError.scopedAccessAcquisitionFailed }
+        defer { environment.stopAccess(accessURL) }
+        let canonicalURL = try validateAccessURL(accessURL, destination: destination)
+        return try await operation(canonicalURL)
+    }
+
+    private nonisolated func resolvedAccessURL(
+        for destination: ArchiveDestination
+    ) throws -> URL {
+        if let bookmarkData = destination.securityScopedBookmarkData {
+            let resolution: (url: URL, isStale: Bool)
+            do {
+                resolution = try environment.resolveBookmark(bookmarkData)
+            } catch {
+                throw ArchiveDestinationAccessError.bookmarkResolutionFailed
+            }
+            guard !resolution.isStale else { throw ArchiveDestinationAccessError.staleBookmark }
+            return resolution.url
+        }
+        return destination.canonicalRootURL
+    }
+
+    private nonisolated func validateAccessURL(
+        _ accessURL: URL,
+        destination: ArchiveDestination
+    ) throws -> URL {
+        let canonicalURL = ArchiveDestinationPath.canonicalURL(accessURL)
+        guard canonicalURL == destination.canonicalRootURL else {
+            throw ArchiveDestinationAccessError.bookmarkResolutionFailed
+        }
+        guard environment.fileExists(canonicalURL) else { throw ArchiveDestinationAccessError.doesNotExist }
+        do {
+            guard try environment.isDirectory(canonicalURL) else {
+                throw ArchiveDestinationAccessError.notDirectory
+            }
+        } catch let error as ArchiveDestinationAccessError {
+            throw error
+        } catch {
+            throw ArchiveDestinationAccessError.inaccessibleDirectory
+        }
+        try verifyWritable(canonicalURL)
+        return canonicalURL
+    }
+
+    private nonisolated func verifyWritable(_ url: URL) throws {
+        do {
+            try environment.verifyWritable(url)
+        } catch {
+            throw ArchiveDestinationAccessError.notWritable
+        }
     }
 }

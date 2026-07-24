@@ -32,11 +32,11 @@ No engineering decision should compromise document safety.
 
 ## Non-Destructive
 
-The application never performs destructive filesystem operations.
+The application never permanently destroys user data.
 
-Existing documents are never overwritten or permanently deleted.
+Archive operations are verified relocations. The application copies an approved redundant document to the archive, verifies the archived copy, and only then removes the redundant original from its active location.
 
-Whenever an operation would replace an existing document, the existing document is preserved before the requested action is completed.
+At no point may an archive operation leave the user with no valid copy of the document. The definitive document identified by the Execution Plan is never modified or relocated.
 
 ---
 

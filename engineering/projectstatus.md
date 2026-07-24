@@ -1,19 +1,19 @@
 # Project Status
 
 **Project:** Document Consolidator  
-**Status:** Implementation — Release 1 Duplicate-Archival Scope Corrected
+**Status:** Implementation — Release 1 Destination-Aware Archive Planning
 
 ---
 
 # Project Summary
 
-Document Consolidator has completed Release 1 implementation Milestone 9.
+Document Consolidator has completed Release 1 implementation Milestone 9 and the subsequent archive-destination planning work.
 
-The duplicate workflow now expresses definitive-copy selection, redundant-copy archival approval, and archive-plan review only, while preserving the NavigationSplitView workflow.
+The duplicate workflow now supports definitive-copy selection, redundant-copy archival approval, authorized archive destinations, destination-aware archive-plan derivation, atomic plan publication, and scoped archive-plan presentation while preserving the NavigationSplitView workflow.
 
 Product Definition has been completed and approved.
 
-Engineering is defining the implementation architecture prior to coding.
+Implementation remains non-destructive and requires explicit approval before any future execution work.
 
 ---
 
@@ -41,6 +41,8 @@ Engineering is defining the implementation architecture prior to coding.
 - ✅ Milestone 7 — Duplicate Detection Engine
 - ✅ Milestone 8 — Duplicate Recommendation Foundation
 - ✅ Milestone 9 — Execution Plan Generation
+- ✅ Post-Milestone 9 — Archive Destination Authorization & Planning
+- ✅ Post-Milestone 9 — Destination-Scoped Archive Plan Presentation
 
 ⬜ Verification
 
@@ -125,12 +127,19 @@ Engineering shall not implement functionality outside the approved Release1Scope
 | 2026-07-19 | Recommendation generation ownership, Review resolution, decisions, and execution-plan eligibility rectified |
 | 2026-07-19 | Release 1 scope corrected to exact-duplicate definitive-copy selection and redundant-copy archive planning |
 | 2026-07-20 | Presentation-only UI refinement completed for duplicate review, approval status, and Archive Plan readability |
+| 2026-07-20 | Review workflow visual redesign applied |
+| 2026-07-21 | Duplicate decision support and scan-preparation workflow refined |
+| 2026-07-21 | Recommendation review, reset behavior, and recommendation detail workflow refined |
+| 2026-07-21 | Archive destination authorization and archive-planning state ownership implemented |
+| 2026-07-21 | Destination-aware archive-plan derivation and atomic publication implemented |
+| 2026-07-21 | Archive destination proposal API and destination-scoped plan presentation implemented |
+| 2026-07-23 | NavigationSplitView pane shift caused by the workflow-stage banner corrected |
 
 ---
 
 # Next Milestone
 
-Release 1 duplicate-archival scope correction passes the focused automated test suite and Debug/Release builds and is pending manual verification.
+Release 1 now has destination-aware archive planning and presentation foundations. Archive execution, audit, recovery, and release verification remain outstanding.
 
 Implementation shall proceed one approved engineering phase at a time.
 
@@ -138,10 +147,10 @@ Implementation shall proceed one approved engineering phase at a time.
 
 # Completion Criteria
 
-Engineering Planning is complete when:
+Engineering Planning is complete:
 
 - Product documentation is approved;
 - engineering documentation is approved;
 - implementation is authorised.
 
-Release 1 implementation may now begin.
+Release 1 implementation is in progress. Completion requires the remaining approved execution, audit, recovery, verification, and release phases.

@@ -1,5 +1,4 @@
-# AGENTS.md — TaskFlow
-# com.nianshouapps.piggytasks | Swift 6 | SwiftUI | SwiftData | HealthKit | WatchConnectivity | CloudKit
+# AGENTS.md
 
 ## Session Start
 
@@ -13,17 +12,18 @@ After providing the challenge response, continue processing any implementation t
 ## Operating Rules
 
 1. **READ BEFORE WRITE** — Read all referenced files and relevant local documentation before proposing or making changes.
-2. **DIFFS ONLY** — Modify only the minimum necessary lines. Never rewrite a working file unless it is explicitly approved for rewrite. Any rewrite exceeding 50 lines requires permission.
-3. **PLAN AND APPROVAL** — Before making changes, provide exactly three concise execution-plan bullets and state any blocking ambiguity within them. Wait for explicit user approval unless the implementation task itself clearly states that the plan or milestone has already been approved and instructs implementation to proceed. An approved implementation task transferred from the engineering discussion is sufficient approval and must not require a second approval.
-4. **ONE PHASE AT A TIME** — Complete and verify the approved phase before proposing or beginning another phase.
-5. **SYNC CHECK** — Before implementation, report the current Git branch, working-tree status, and latest commit hash. Do not discard or overwrite uncommitted work.
-6. **STOP ON MATERIAL AMBIGUITY** — Stop when a missing file, unclear requirement, conflicting instruction, or undecided design choice prevents a safe implementation. Do not guess.
-7. **NO AUTOMATED TESTS** — Do not create or run unit, UI, integration, or other automated tests unless explicitly instructed.
-8. **NO NEW FILES** — Do not create files unless the approved plan explicitly requires them.
-9. **RESPONSE LIMIT** — Keep routine responses below 800 tokens. When essential content cannot fit, stop at a clean boundary and ask the user to continue.
-10. **MANUAL VERIFICATION** — Conclude every implementation response with one precise, single-line instruction for manual verification on the local machine.
-11. **NO CODE PREVIEWS** — Before approval, do not print proposed code, full replacement files, or speculative diffs. Identify the target files and objective only. After approval, make changes through tools and report the resulting diff at a summary level.
-12. **COMMIT AND PUSH** — After an approved code change has been manually verified or the user explicitly instructs completion, commit with a descriptive message and run `git push origin HEAD`. Never switch to or push another branch implicitly. Never push to `main` unless `main` is already checked out.
+2. **ENGINEERING GOVERNANCE** — Treat the Engineering Playbook as authoritative for engineering methodology. Engineering Principles are mandatory decision gates, not reference material. If a principle materially affects the task, explain its impact before implementation.
+3. **DIFFS ONLY** — Modify only the minimum necessary lines. Never rewrite a working file unless it is explicitly approved for rewrite. Any rewrite exceeding 50 lines requires permission.
+4. **PLAN AND APPROVAL** — Before making changes, provide exactly three concise execution-plan bullets and state any blocking ambiguity within them. Wait for explicit user approval unless the implementation task itself clearly states that the plan or milestone has already been approved and instructs implementation to proceed. An approved implementation task transferred from the engineering discussion is sufficient approval and must not require a second approval.
+5. **ONE PHASE AT A TIME** — Complete and verify the approved phase before proposing or beginning another phase.
+6. **SYNC CHECK** — Before implementation, report the current Git branch, working-tree status, and latest commit hash. Do not discard or overwrite uncommitted work.
+7. **STOP ON MATERIAL AMBIGUITY** — Stop when a missing file, unclear requirement, conflicting instruction, or undecided design choice prevents a safe implementation. Do not guess.
+8. **NO AUTOMATED TESTS** — Do not create or run unit, UI, integration, or other automated tests unless explicitly instructed.
+9. **NO NEW FILES** — Do not create files unless the approved plan explicitly requires them.
+10. **RESPONSE LIMIT** — Keep routine responses below 800 tokens. When essential content cannot fit, stop at a clean boundary and ask the user to continue.
+11. **MANUAL VERIFICATION** — Conclude every implementation response with one precise, single-line instruction for manual verification on the local machine.
+12. **NO CODE PREVIEWS** — Before approval, do not print proposed code, full replacement files, or speculative diffs. Identify the target files and objective only. After approval, make changes through tools and report the resulting diff at a summary level.
+13. **COMMIT AND PUSH** — After an approved code change has been manually verified or the user explicitly instructs completion, commit with a descriptive message and run `git push origin HEAD`. Never switch to or push another branch implicitly. Never push to `main` unless `main` is already checked out.
 
 ## Project Context
 
@@ -64,9 +64,11 @@ Each approved milestone shall be implemented in a new Codex session.
 At the beginning of the session:
 
 1. Read all authoritative project documentation referenced by this document.
-2. Perform the standard repository readiness check.
-3. If the repository is ready and the implementation task explicitly states that the milestone has already been approved, proceed immediately with implementation.
-4. Do not request a second implementation approval unless a genuine architectural ambiguity or repository blocker is discovered.
+2. Read 'engineering/Engineering_Playbook.md' and adopt it as the governing engineering methodology for the entire session.
+3. Review the Engineering Principles and identify those applicable to the current task. Explain how they influence the proposed engineering approach and report any principle that prevents implementation before proceeding.
+4. Perform the standard repository readiness check.
+5. If the repository is ready and the implementation task explicitly states that the milestone has already been approved, proceed immediately with implementation.
+6. Do not request a second implementation approval unless a genuine architectural ambiguity or repository blocker is discovered.
 
 ## Invariants
 

@@ -1,4 +1,4 @@
-// 2026-07-21 18:14 SGT
+// 2026-07-24 15:49 SGT
 
 import Foundation
 
@@ -11,7 +11,40 @@ enum ArchivePlanningLifecycleError: Error, Equatable, Sendable {
     case staleGeneration
 }
 
+enum ExecutionLifecycleError: Error, Equatable, Sendable {
+    case noPublishedPlan
+    case executionInProgress
+    case destinationAccess(ArchiveDestinationAccessError)
+    case destinationAccessFailed
+    case globalPreflightFailed(String)
+}
+
 extension ScanManager {
+    @discardableResult
+    func executePublishedPlan() async -> Result<ExecutionSummary, ExecutionLifecycleError> {
+        guard !inventory.isExecuting else { return .failure(.executionInProgress) }
+        guard let state = inventory.beginExecution(), let destination = state.destination else {
+            return .failure(.noPublishedPlan)
+        }
+        defer { inventory.finishExecution() }
+
+        do {
+            let summary = try await ArchiveDestinationAccess().withAccess(to: destination) { authorizedRoot in
+                try await ExecutionEngine().execute(state.plan, authorizedRoot: authorizedRoot)
+            }
+            return .success(summary)
+        } catch let error as ArchiveDestinationAccessError {
+            return .failure(.destinationAccess(error))
+        } catch let error as ExecutionEngineError {
+            switch error {
+            case .invalidPlan(let message):
+                return .failure(.globalPreflightFailed(message))
+            }
+        } catch {
+            return .failure(.destinationAccessFailed)
+        }
+    }
+
     @discardableResult
     func generateExecutionPlan() async -> Result<ArchivePlanningState, ArchivePlanningLifecycleError> {
         await generateExecutionPlan(for: inventory.archiveDestination)

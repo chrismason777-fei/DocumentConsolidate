@@ -1,4 +1,4 @@
-// 2026-07-21 18:23 SGT
+// 2026-07-24 16:10 SGT
 
 import SwiftUI
 
@@ -17,18 +17,22 @@ struct ExecutionPlanReviewView: View {
             metrics.padding(.horizontal, 20).padding(.bottom, 18)
             ArchiveDestinationSection(errorMessage: $destinationError)
                 .padding(.horizontal, 20).padding(.bottom, 16)
-            HStack {
+            VStack(alignment: .leading, spacing: 10) {
                 VStack(alignment: .leading, spacing: 3) {
                     Text("PLANNED ARCHIVAL").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
                     Text(readinessExplanation).font(.caption).foregroundStyle(readinessColor)
                 }
-                Spacer()
-                Button(scanManager.executionPlan == nil ? "Prepare Archive Plan" : "Refresh Validation", systemImage: "arrow.clockwise") {
-                    refreshPlan()
+                HStack {
+                    Spacer()
+                    Button(scanManager.executionPlan == nil ? "Prepare Archive Plan" : "Refresh Validation", systemImage: "arrow.clockwise") {
+                        refreshPlan()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .fixedSize(horizontal: true, vertical: false)
+                    .disabled(scanManager.currentSession == nil || scanManager.inventory.isGeneratingExecutionPlan)
+                    ExecutionControlsView()
+                    if scanManager.inventory.isGeneratingExecutionPlan { ProgressView().controlSize(.small) }
                 }
-                .buttonStyle(.borderedProminent)
-                .disabled(scanManager.currentSession == nil || scanManager.inventory.isGeneratingExecutionPlan)
-                if scanManager.inventory.isGeneratingExecutionPlan { ProgressView().controlSize(.small) }
             }
             .padding(.horizontal, 20).padding(.bottom, 10)
             if scanManager.executionPlan?.operations.isEmpty != false {

@@ -113,13 +113,16 @@ The Recommendation Engine never modifies the filesystem.
 
 Responsible for executing approved recommendations.
 
-Before any operation that would replace an existing document:
+Each archive operation is a verified relocation:
 
-1. preserve the existing document;
-2. perform the approved operation;
-3. verify completion.
+1. copy the approved redundant document to the archive location;
+2. verify that the archived copy matches the approved document;
+3. only after successful verification, remove the redundant original from its active location;
+4. record the execution outcome for Audit & Recovery.
 
 Execution performs only approved operations.
+
+Non-destructive execution means user data is never permanently destroyed. At no point may an archive operation leave the user with no valid copy of the document. The definitive document identified by the Execution Plan is never modified or relocated.
 
 ---
 
@@ -183,7 +186,7 @@ Release 1 shall not:
 
 - combine analysis with execution;
 - execute recommendations automatically;
-- overwrite existing documents;
+- overwrite archive destinations or remove an original before its archived copy is verified;
 - depend upon cloud services;
 - depend upon external APIs;
 - perform background monitoring.

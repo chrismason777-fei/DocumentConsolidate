@@ -66,9 +66,11 @@ No filesystem modifications shall occur during a Dry Run.
 
 Execution shall perform only approved operations.
 
-Execution shall be non-destructive.
+Execution shall be non-destructive: the application shall never permanently destroy user data.
 
-Existing documents shall never be overwritten without first preserving the existing version in a separate location.
+Each archive operation shall be a verified relocation. The application shall copy the approved redundant document to the archive location, verify that the archived copy matches the approved document, and only after successful verification remove the redundant original from its active location.
+
+Archive destinations shall never be overwritten. At no point may an archive operation leave the user with no valid copy of the document. The definitive document identified by the Execution Plan shall never be modified or relocated.
 
 ---
 

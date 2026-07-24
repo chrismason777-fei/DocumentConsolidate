@@ -1,4 +1,4 @@
-// 2026-07-21 18:23 SGT
+// 2026-07-24 16:23 SGT
 
 import SwiftUI
 import UniformTypeIdentifiers
@@ -133,6 +133,8 @@ enum ArchiveDestinationPresentation {
         switch error {
         case .notFileURL, .doesNotExist, .notDirectory, .inaccessibleDirectory:
             "Select an existing, accessible folder for the Archive Destination."
+        case .notWritable:
+            "The Archive Destination is not writable. Choose a folder that allows read-write access."
         case .equalsScanRoot, .insideScanRoot:
             "The Archive Destination must be outside all scanned folders."
         case .scopedAccessAcquisitionFailed:

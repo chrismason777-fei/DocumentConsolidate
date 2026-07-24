@@ -1,4 +1,4 @@
-// 2026-07-21 18:35 SGT
+// 2026-07-24 16:55 SGT
 //
 //  ContentView.swift
 //  DocumentConsolidate
@@ -17,12 +17,21 @@ struct ContentView: View {
 
     var body: some View {
         NavigationSplitView {
-            List(selection: $selectedStage) {
+            List {
                 Section("Workflow") {
                     ForEach(WorkflowStage.allCases) { stage in
-                        NavigationLink(value: stage) {
+                        Button { selectedStage = stage } label: {
                             WorkflowStageRow(stage: stage, status: status(for: stage))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 6)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(
+                                    selectedStage == stage ? Color.accentColor : Color.clear,
+                                    in: RoundedRectangle(cornerRadius: 8)
+                                )
                         }
+                        .buttonStyle(.plain)
+                        .listRowBackground(Color.clear)
                     }
                 }
             }
