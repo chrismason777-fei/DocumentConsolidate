@@ -1,4 +1,4 @@
-// 2026-07-24 16:42 SGT
+// 2026-07-24 21:08 SGT
 
 import Foundation
 
@@ -103,11 +103,14 @@ struct ExecutionEngine: Sendable {
             }
             try fileManager.copyItem(at: source.url, to: destination)
 
+            let freshSourceHash = try await DocumentContentHasher.hash(fileAt: source.url)
             let archivedHash = try await DocumentContentHasher.hash(fileAt: destination)
             let archivedSize = try destination.resourceValues(forKeys: [.fileSizeKey]).fileSize
-            guard archivedHash == operation.expectedHash,
+            guard freshSourceHash == archivedHash,
+                  freshSourceHash == operation.expectedHash,
+                  archivedHash == operation.expectedHash,
                   Int64(archivedSize ?? -1) == source.fileSize else {
-                throw ExecutionEngineError.invalidPlan("The archived copy failed hash or file-size verification.")
+                throw ExecutionEngineError.invalidPlan("The source or archived copy failed hash or file-size verification.")
             }
 
             try fileManager.removeItem(at: source.url)

@@ -1,4 +1,4 @@
-// 2026-07-21 11:28 SGT
+// 2026-07-24 21:08 SGT
 
 import Foundation
 import Testing
@@ -67,6 +67,48 @@ struct DuplicateArchivalWorkflowTests {
         #expect(manager.currentSession?.acceptedRecommendationCount == 0)
     }
 
+    @Test func executionRemovesSourceAfterPostCopyHashesMatch() async throws {
+        let fixture = try await executionFixture()
+        defer { try? FileManager.default.removeItem(at: fixture.root) }
+
+        let summary = try await ExecutionEngine().execute(fixture.plan, authorizedRoot: fixture.archiveRoot)
+
+        #expect(summary.results.first?.outcome == .succeeded)
+        #expect(summary.results.first?.sourceRemoved == true)
+        #expect(!FileManager.default.fileExists(atPath: fixture.source.path))
+        #expect(FileManager.default.fileExists(atPath: fixture.destination.path))
+    }
+
+    @Test func postValidationSourceChangeProducesFreshHashMismatchAndPreservesSource() async throws {
+        let fixture = try await executionFixture()
+        defer { try? FileManager.default.removeItem(at: fixture.root) }
+        let fileManager = CopyMutatingFileManager { source, _ in
+            try Data("changed source".utf8).write(to: source)
+        }
+
+        let summary = try await ExecutionEngine(fileManager: fileManager)
+            .execute(fixture.plan, authorizedRoot: fixture.archiveRoot)
+
+        #expect(summary.results.first?.outcome == .failed)
+        #expect(summary.results.first?.sourceRemoved == false)
+        #expect(FileManager.default.fileExists(atPath: fixture.source.path))
+    }
+
+    @Test func archiveHashMismatchFailsAndPreservesSource() async throws {
+        let fixture = try await executionFixture()
+        defer { try? FileManager.default.removeItem(at: fixture.root) }
+        let fileManager = CopyMutatingFileManager { _, destination in
+            try Data("changed archive".utf8).write(to: destination)
+        }
+
+        let summary = try await ExecutionEngine(fileManager: fileManager)
+            .execute(fixture.plan, authorizedRoot: fixture.archiveRoot)
+
+        #expect(summary.results.first?.outcome == .failed)
+        #expect(summary.results.first?.sourceRemoved == false)
+        #expect(FileManager.default.fileExists(atPath: fixture.source.path))
+    }
+
     @MainActor
     private func configuredManager(group: DuplicateGroup) -> ScanManager {
         let inventory = Inventory()
@@ -101,5 +143,86 @@ struct DuplicateArchivalWorkflowTests {
             )
         }
         return DuplicateGroup(identifier: hash, documents: documents)
+    }
+
+    private func executionFixture() async throws -> (
+        root: URL,
+        archiveRoot: URL,
+        source: URL,
+        destination: URL,
+        plan: ExecutionPlan
+    ) {
+        let root = FileManager.default.temporaryDirectory.appending(path: "ExecutionEngine-\(UUID().uuidString)")
+        let source = root.appending(path: "source.txt")
+        let definitive = root.appending(path: "definitive.txt")
+        let archiveRoot = root.appending(path: "archive", directoryHint: .isDirectory)
+        let destination = archiveRoot.appending(path: "session/source.txt")
+        let content = Data("approved duplicate".utf8)
+        try FileManager.default.createDirectory(at: archiveRoot, withIntermediateDirectories: true)
+        try content.write(to: source)
+        try content.write(to: definitive)
+        let hash = try await DocumentContentHasher.hash(fileAt: source)
+        let sourceRecord = document(at: source, size: Int64(content.count), hash: hash)
+        let definitiveRecord = document(at: definitive, size: Int64(content.count), hash: hash)
+        let operation = PlannedOperation(
+            id: "operation",
+            type: .archiveRedundantCopy,
+            sourceDocument: sourceRecord,
+            destination: destination,
+            definitiveDocument: definitiveRecord,
+            reason: "Test",
+            recommendationID: "recommendation",
+            expectedHash: hash,
+            expectedDefinitiveHash: hash,
+            executionStatus: .notStarted,
+            validationStatus: .valid,
+            validationIssues: []
+        )
+        return (
+            root,
+            archiveRoot,
+            source,
+            destination,
+            ExecutionPlan(
+                id: "plan",
+                scanSessionID: sessionID,
+                operations: [operation],
+                destinationRoot: archiveRoot
+            )
+        )
+    }
+
+    private func document(at url: URL, size: Int64, hash: String) -> DocumentRecord {
+        DocumentRecord(
+            scanSessionID: sessionID,
+            url: url,
+            filename: url.lastPathComponent,
+            fileExtension: url.pathExtension,
+            fileSize: size,
+            createdAt: nil,
+            modifiedAt: nil,
+            analysisStatus: .complete,
+            isSupported: true,
+            category: .text,
+            contentHash: hash,
+            hashStatus: .complete,
+            duplicateStatus: .duplicate,
+            duplicateGroupIdentifier: hash,
+            duplicateGroupSize: 2
+        )
+    }
+}
+
+private final class CopyMutatingFileManager: FileManager, @unchecked Sendable {
+    private let mutateAfterCopy: (URL, URL) throws -> Void
+
+    init(mutateAfterCopy: @escaping (URL, URL) throws -> Void) {
+        self.mutateAfterCopy = mutateAfterCopy
+        super.init()
+    }
+
+    override func copyItem(at srcURL: URL, to dstURL: URL) throws {
+        try super.copyItem(at: srcURL, to: dstURL)
+        try mutateAfterCopy(srcURL, dstURL)
     }
 }
