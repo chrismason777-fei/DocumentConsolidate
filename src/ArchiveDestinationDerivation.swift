@@ -1,4 +1,4 @@
-// 2026-07-24 16:42 SGT
+// 2026-07-24 20:45 SGT
 
 import Foundation
 
@@ -26,27 +26,29 @@ struct ArchiveDestinationDerivation: Sendable {
         calendar: Calendar
     ) -> [PlannedOperation] {
         let canonicalRoots = scanRoots.map(ArchiveDestinationPath.canonicalURL)
-        let sessionRoot = destination.canonicalRootURL
-            .appending(path: "Document Consolidate", directoryHint: .isDirectory)
-            .appending(path: sessionDirectoryName(sessionID: sessionID, createdAt: createdAt, calendar: calendar), directoryHint: .isDirectory)
+        let sessionRoot = uniqueSessionRoot(
+            in: destination.canonicalRootURL,
+            baseName: sessionDirectoryName(sessionID: sessionID, createdAt: createdAt, calendar: calendar)
+        )
 
         let initial = operations.map { operation -> PlannedOperation in
             guard let source = operation.sourceDocument else { return operation }
             let sourceURL = ArchiveDestinationPath.canonicalURL(source.url)
             let containingRoots = canonicalRoots.filter { ArchiveDestinationPath.contains(sourceURL, in: $0) }
-            guard containingRoots.max(by: { $0.pathComponents.count < $1.pathComponents.count }) != nil else {
+            guard let containingRoot = containingRoots.max(by: { $0.pathComponents.count < $1.pathComponents.count }) else {
                 return copy(operation, destination: nil, issues: [.sourceOutsideScanRoots])
             }
 
-            let archiveFilename = sourceURL.lastPathComponent
-            guard !archiveFilename.isEmpty,
-                  archiveFilename != ".",
-                  archiveFilename != "..",
-                  archiveFilename != "/" else {
+            let relativeComponents = sourceURL.pathComponents.dropFirst(containingRoot.pathComponents.count)
+            let archiveComponents = [containingRoot.lastPathComponent] + relativeComponents
+            guard !relativeComponents.isEmpty,
+                  archiveComponents.allSatisfy({ !$0.isEmpty && $0 != "." && $0 != ".." && $0 != "/" }) else {
                 return copy(operation, destination: nil, issues: [.invalidRelativePath])
             }
 
-            let resolved = sessionRoot.appending(path: archiveFilename)
+            let resolved = archiveComponents.reduce(sessionRoot) { partialURL, component in
+                partialURL.appending(path: component)
+            }
             let canonicalDestination = ArchiveDestinationPath.canonicalURL(resolved)
             var issues: [ArchiveDestinationDerivationIssue] = []
             if !ArchiveDestinationPath.contains(canonicalDestination, in: destination.canonicalRootURL) {
@@ -78,8 +80,18 @@ struct ArchiveDestinationDerivation: Sendable {
         formatter.calendar = calendar
         formatter.timeZone = calendar.timeZone
         formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "yyyy-MM-dd HH-mm-ss"
-        return "\(formatter.string(from: createdAt)) - \(sessionID.uuidString.prefix(6).uppercased())"
+        formatter.dateFormat = "yyMMdd-HHmm"
+        return formatter.string(from: createdAt)
+    }
+
+    private func uniqueSessionRoot(in destinationRoot: URL, baseName: String) -> URL {
+        var suffix = 1
+        var candidate = destinationRoot.appending(path: baseName, directoryHint: .isDirectory)
+        while environment.itemExists(candidate) {
+            suffix += 1
+            candidate = destinationRoot.appending(path: "\(baseName)-\(suffix)", directoryHint: .isDirectory)
+        }
+        return candidate
     }
 
     private func copy(

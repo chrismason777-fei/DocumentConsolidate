@@ -1,15 +1,15 @@
 # Project Status
 
 **Project:** Document Consolidator  
-**Status:** Implementation — Release 1 Destination-Aware Archive Planning
+**Status:** Implementation — Release 1 Archive Execution
 
 ---
 
 # Project Summary
 
-Document Consolidator has completed Release 1 implementation Milestone 9 and the subsequent archive-destination planning work.
+Document Consolidator has completed Release 1 implementation Milestone 9, archive-destination planning, and verified archive execution.
 
-The duplicate workflow now supports definitive-copy selection, redundant-copy archival approval, authorized archive destinations, destination-aware archive-plan derivation, atomic plan publication, and scoped archive-plan presentation while preserving the NavigationSplitView workflow.
+The duplicate workflow now supports definitive-copy selection, redundant-copy archival approval, authorized archive destinations, destination-aware archive-plan derivation, atomic plan publication, scoped archive-plan presentation, and verified archive execution while preserving the NavigationSplitView workflow.
 
 Product Definition has been completed and approved.
 
@@ -43,6 +43,7 @@ Implementation remains non-destructive and requires explicit approval before any
 - ✅ Milestone 9 — Execution Plan Generation
 - ✅ Post-Milestone 9 — Archive Destination Authorization & Planning
 - ✅ Post-Milestone 9 — Destination-Scoped Archive Plan Presentation
+- ✅ Post-Milestone 9 — Verified Archive Execution
 
 ⬜ Verification
 
@@ -134,12 +135,14 @@ Engineering shall not implement functionality outside the approved Release1Scope
 | 2026-07-21 | Destination-aware archive-plan derivation and atomic publication implemented |
 | 2026-07-21 | Archive destination proposal API and destination-scoped plan presentation implemented |
 | 2026-07-23 | NavigationSplitView pane shift caused by the workflow-stage banner corrected |
+| 2026-07-24 | Verified archive execution workflow implemented |
+| 2026-07-24 | Archive destinations preserve source-relative paths and use short collision-safe session folder names |
 
 ---
 
 # Next Milestone
 
-Release 1 now has destination-aware archive planning and presentation foundations. Archive execution, audit, recovery, and release verification remain outstanding.
+Release 1 now has destination-aware archive planning, presentation, and verified execution. Audit, recovery, and release verification remain outstanding.
 
 Implementation shall proceed one approved engineering phase at a time.
 
